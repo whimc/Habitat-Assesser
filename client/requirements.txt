@@ -1,0 +1,3 @@
+pydirectinput
+python-socketio
+pywin32
