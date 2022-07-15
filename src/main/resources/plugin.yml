@@ -1,0 +1,9 @@
+name: WHIMC-Photographer
+version: '${project.version}'
+main: edu.whimc.photographer.Photographer
+api-version: 1.18
+depend:
+  - WHIMC-Observations
+commands:
+  photographer:
+    description: "Base command of WHIMC-Photographer"
