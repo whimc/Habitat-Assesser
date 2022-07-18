@@ -115,3 +115,4 @@ run/
 # Python stuff
 venv/
 .vscode/
+__pycache__/
