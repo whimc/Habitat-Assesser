@@ -10,6 +10,10 @@ public class Response {
     private String generatedCaption;
     private float score;
 
+    public Response() {
+        super();
+    }
+
     public Response(UUID clientUuid, int observationId, String feedback, String generatedCaption, float score) {
         this.clientUuid = clientUuid;
         this.observationId = observationId;
