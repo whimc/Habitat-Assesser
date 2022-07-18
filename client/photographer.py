@@ -6,6 +6,8 @@ Sending key to inactive window
 
 """
 import time
+import requests
+import json
 
 import socketio
 import win32gui
@@ -15,8 +17,12 @@ import pydirectinput
 
 from typing import Optional
 from ctypes import windll, create_unicode_buffer
+from pathlib import Path
 
 IS_FOCUSED = False
+UUID = None
+SCREENSHOTS_DIR = Path("~/AppData/Roaming/.minecraft/screenshots").expanduser().resolve()
+API_URL = "http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/caption-image"
 
 
 def get_foreground_window_title() -> Optional[str]:
@@ -40,6 +46,21 @@ def send_key(window_id, key, delay=0.5):
     win32api.PostMessage(window_id, win32con.WM_KEYUP, key, 0)
 
 
+def get_newest_screenshot() -> Path:
+    paths = [path for path in SCREENSHOTS_DIR.iterdir() if path.is_file()]
+    return max(paths, key=lambda f: f.stat().st_ctime)
+
+
+def call_api(screenshot_path: Path, user_caption: str) -> dict:
+    response = requests.post(
+        API_URL,
+        data={"user-caption": user_caption},
+        files={"image": open(screenshot_path, "rb")},
+    )
+    return json.loads(response.content)
+
+
+# TODO use asyncio
 sio = socketio.Client()
 sio.connect("ws://localhost:8234")
 
@@ -61,11 +82,13 @@ def disconnect():
 
 @sio.event
 def uuid(data):
+    global UUID
+    UUID = data
     print(f"UUID: {data}")
 
 
 @sio.event
-def screenshot():
+def screenshot(obs_id, user_caption):
     if not IS_FOCUSED:
         print("FAILED TO TAKE SCREENSHOT!!")
         return
@@ -75,6 +98,26 @@ def screenshot():
     pydirectinput.keyDown("f2")
     time.sleep(0.1)
     pydirectinput.keyUp("f2")
+
+    # Give time for the file to show up
+    time.sleep(2)
+    print("Grabbing most recent screenshot")
+
+    ss_path = get_newest_screenshot()
+
+    print("Calling API")
+    data = call_api(ss_path, user_caption)
+    print(f"response: {data}")
+    sio.emit(
+        "screenshot_response",
+        data={
+            "client_uuid": UUID,
+            "observation_id": obs_id,
+            "feedback": data["feedback"],
+            "generated_caption": data["generated caption"],
+            "score": data["score"],
+        },
+    )
 
     # TODO: - Get screenshot file
     #       - Call API and get response
