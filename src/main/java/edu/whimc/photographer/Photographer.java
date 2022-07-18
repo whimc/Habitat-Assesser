@@ -119,7 +119,7 @@ public final class Photographer extends JavaPlugin implements Listener {
         if (subCmd.equalsIgnoreCase("clients")) {
             sender.sendMessage("Clients:");
             for (SocketIOClient client : this.server.getAllClients()) {
-                sender.sendMessage(client.toString());
+                sender.sendMessage(client.getRemoteAddress() + ": " + client.get("uuid"));
             }
 
             return true;
@@ -155,8 +155,7 @@ public final class Photographer extends JavaPlugin implements Listener {
 
             String message = StringUtils.join(args, " ", 2, args.length);
             Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-                client.sendEvent("test", message);
-                client.sendEvent("nothing");
+                client.sendEvent("message", message);
             });
             return true;
         }
