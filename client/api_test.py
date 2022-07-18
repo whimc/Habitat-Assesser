@@ -20,16 +20,19 @@ def get_newest_screenshot() -> Path:
     return max(paths, key=lambda f: f.stat().st_ctime)
 
 
-files = {"image": open(get_newest_screenshot(), "rb")}
-response = requests.post(
-    API_URL,
-    data={
-        "user-caption": "Plain orange desert",
-    },
-    files=files,
-)
+def get_feedback():
+    files = {"image": open(get_newest_screenshot(), "rb")}
+    response = requests.post(
+        API_URL,
+        data={
+            "user-caption": "Plain orange desert",
+        },
+        files=files,
+    )
 
-data = json.loads(response.content)
-feedback = Feedback(data["feedback"], data["generated caption"], data["score"])
+    data = json.loads(response.content)
+    return Feedback(data["feedback"], data["generated caption"], data["score"])
 
+
+feedback = get_feedback()
 print(feedback)
