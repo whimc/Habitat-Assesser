@@ -88,6 +88,11 @@ def uuid(data):
 
 
 @sio.event
+def message(msg):
+    print(f"Message from server: {msg}")
+
+
+@sio.event
 def screenshot(obs_id, user_caption):
     if not IS_FOCUSED:
         print("FAILED TO TAKE SCREENSHOT!!")
@@ -111,10 +116,10 @@ def screenshot(obs_id, user_caption):
     sio.emit(
         "screenshot_response",
         data={
-            "client_uuid": UUID,
-            "observation_id": obs_id,
+            "clientUuid": UUID,
+            "observationId": obs_id,
             "feedback": data["feedback"],
-            "generated_caption": data["generated caption"],
+            "generatedCaption": data["generated caption"],
             "score": data["score"],
         },
     )
@@ -146,21 +151,3 @@ while True:
 
     if not IS_FOCUSED:
         print("Minecraft not focused!!")
-
-    # pydirectinput.keyDown('f2')
-    # time.sleep(0.1)
-    # pydirectinput.keyUp('f2')
-
-    # print("attempting screenshot")
-
-# send_key(mc, win32con.VK_F2)
-# print(win32api.FormatMessage(win32api.GetLastError()))
-
-# win32api.PostMessage(mc, win32con.WM_CHAR, 0x44, 0)
-
-# def send_key(key):
-
-
-# print('Go to minecraft!!!')
-# time.sleep(3)
-# send_key("f2")
