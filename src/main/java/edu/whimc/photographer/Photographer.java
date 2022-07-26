@@ -1,33 +1,34 @@
 package edu.whimc.photographer;
 
-import com.gmail.filoghost.holographicdisplays.api.Hologram;
 import com.corundumstudio.socketio.Configuration;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
+import com.gmail.filoghost.holographicdisplays.api.Hologram;
 import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
 import edu.whimc.observations.Observations;
-import edu.whimc.observations.models.ObserveEvent;
 import edu.whimc.observations.models.Observation;
+import edu.whimc.observations.models.ObserveEvent;
+import edu.whimc.photographer.socket.Response;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import edu.whimc.photographer.socket.Response;
+import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class Photographer extends JavaPlugin implements Listener {
+public final class Photographer extends JavaPlugin implements Listener, TabCompleter {
 
     private SocketIOServer server;
-    private Map<UUID, UUID> photographers = new HashMap<>();
+    private final Map<UUID, UUID> photographers = new HashMap<>();
     private Observations observationsPlugin;
 
     @Override
@@ -178,5 +179,12 @@ public final class Photographer extends JavaPlugin implements Listener {
         }
 
         return null;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return this.server.getAllClients().stream()
+                .map(client-> client.get("uuid").toString())
+                .collect(Collectors.toList());
     }
 }
