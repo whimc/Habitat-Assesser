@@ -35,11 +35,11 @@ public final class Photographer extends JavaPlugin implements Listener, TabCompl
     public void onEnable() {
         super.saveDefaultConfig();
 
+        this.observationsPlugin = (Observations) getServer().getPluginManager().getPlugin("WHIMC-Observations");
+
         Configuration config = new Configuration();
         config.setHostname(super.getConfig().getString("websocket.host"));
         config.setPort(super.getConfig().getInt("websocket.port"));
-
-        this.observationsPlugin = (Observations) getServer().getPluginManager().getPlugin("WHIMC-Observations");
 
         this.server = new SocketIOServer(config);
         this.server.addConnectListener(client -> {
@@ -110,7 +110,9 @@ public final class Photographer extends JavaPlugin implements Listener, TabCompl
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             sender.sendMessage("/photographer clients");
+            sender.sendMessage("/photographer disconnect-all");
             sender.sendMessage("/photographer collect <uuid>");
+            sender.sendMessage("/photographer disconnect <uuid>");
             sender.sendMessage("/photographer send <uuid> <msg>");
             return true;
         }
@@ -126,6 +128,14 @@ public final class Photographer extends JavaPlugin implements Listener, TabCompl
             return true;
         }
 
+        if (subCmd.equalsIgnoreCase("disconnect-all")) {
+            for (SocketIOClient client : this.server.getAllClients()) {
+                sender.sendMessage("Disconnecting " + client.getRemoteAddress() + ": " + client.get("uuid"));
+                client.disconnect();
+            }
+            return true;
+        }
+
         if (args.length < 2) {
             return true;
         }
@@ -135,6 +145,12 @@ public final class Photographer extends JavaPlugin implements Listener, TabCompl
 
         if (client == null) {
             sender.sendMessage("Client not found");
+            return true;
+        }
+
+        if (subCmd.equalsIgnoreCase("disconnect")) {
+            sender.sendMessage("Disconnecting " + client.getRemoteAddress() + ": " + client.get("uuid"));
+            client.disconnect();
             return true;
         }
 
