@@ -6,23 +6,33 @@ Sending key to inactive window
 
 """
 import time
-import requests
 import json
+import asyncio
+import aiohttp
+import time
+import argparse
 
 import socketio
 import win32gui
-import win32con
-import win32api
 import pydirectinput
 
 from typing import Optional
 from ctypes import windll, create_unicode_buffer
 from pathlib import Path
+from dataclasses import dataclass
 
-IS_FOCUSED = False
-UUID = None
 SCREENSHOTS_DIR = Path("~/AppData/Roaming/.minecraft/screenshots").expanduser().resolve()
 API_URL = "http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/caption-image"
+
+
+@dataclass
+class DataStore:
+    uuid: str = None
+    uuid_event = asyncio.Event()
+    is_focused = False
+
+
+DATA = DataStore()  # Global shared data
 
 
 def get_foreground_window_title() -> Optional[str]:
@@ -35,88 +45,81 @@ def get_foreground_window_title() -> Optional[str]:
     return buf.value
 
 
-def send_key(window_id, key, delay=0.5):
-    """https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes?redirectedfrom=MSDN"""
-    win32api.SendMessage(window_id, win32con.WM_KEYDOWN, key, 0)
-    time.sleep(delay)
-    win32api.SendMessage(window_id, win32con.WM_KEYUP, key, 0)
-
-    win32api.PostMessage(window_id, win32con.WM_KEYDOWN, key, 0)
-    time.sleep(delay)
-    win32api.PostMessage(window_id, win32con.WM_KEYUP, key, 0)
-
-
 def get_newest_screenshot() -> Path:
     paths = [path for path in SCREENSHOTS_DIR.iterdir() if path.is_file()]
-    return max(paths, key=lambda f: f.stat().st_ctime)
+    return max(paths, key=lambda path: path.stat().st_ctime)
 
 
-def call_api(screenshot_path: Path, user_caption: str) -> dict:
-    response = requests.post(
-        API_URL,
-        data={"user-caption": user_caption},
-        files={"image": open(screenshot_path, "rb")},
-    )
-    return json.loads(response.content)
+async def call_api(screenshot_path: Path, user_caption: str) -> dict:
+    data = {"user-caption": user_caption, "image": open(screenshot_path, "rb")}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(API_URL, data=data) as resp:
+            raw_data = await resp.content.read()
+    return json.loads(raw_data)
 
 
 # TODO use asyncio
-sio = socketio.Client()
-sio.connect("ws://localhost:8234")
+sio = socketio.AsyncClient()
 
 
 @sio.event
-def connect():
+async def connect():
     print("I'm connected!")
 
 
 @sio.event
-def connect_error(data):
+async def connect_error(data):
     print(f"The connection failed! [{data}]")
 
 
 @sio.event
-def disconnect():
+async def disconnect():
     print("I'm disconnected!")
+    DATA.uuid = None
+    DATA.uuid_event.clear()
+
+    await DATA.uuid_event.wait()
+    print(f"new uuid: {DATA.uuid}")
 
 
 @sio.event
-def uuid(data):
-    global UUID
-    UUID = data
-    print(f"UUID: {data}")
+async def uuid(data):
+    DATA.uuid = data
+    DATA.uuid_event.set()
 
 
 @sio.event
-def message(msg):
+async def message(msg):
     print(f"Message from server: {msg}")
 
 
 @sio.event
-def screenshot(obs_id, user_caption):
-    if not IS_FOCUSED:
-        print("FAILED TO TAKE SCREENSHOT!!")
+async def screenshot(obs_id, user_caption):
+    if not DATA.is_focused:
+        print("Minecraft not focused - failed to take a screenshot!")
+        await sio.emit("screenshot_failed")
         return
 
     print("Taking screenshot")
-
     pydirectinput.keyDown("f2")
     time.sleep(0.1)
     pydirectinput.keyUp("f2")
 
-    # Give time for the file to show up
-    time.sleep(2)
-    print("Grabbing most recent screenshot")
+    # Give time for the picture to process
+    await asyncio.sleep(2)
 
+    print("Grabbing most recent screenshot")
     ss_path = get_newest_screenshot()
 
-    print("Calling API")
-    data = call_api(ss_path, user_caption)
+    print(f"Calling API with picture {ss_path}")
+    data = await call_api(ss_path, user_caption)
     print(f"response: {data}")
-    sio.emit(
+
+    print("sending response to server")
+    await sio.emit(
         "screenshot_response",
         data={
-            "clientUuid": UUID,
+            "clientUuid": DATA.uuid,
             "observationId": obs_id,
             "feedback": data["feedback"],
             "generatedCaption": data["generated caption"],
@@ -124,30 +127,58 @@ def screenshot(obs_id, user_caption):
         },
     )
 
-    # TODO: - Get screenshot file
-    #       - Call API and get response
-    #       - Send response back to server
+
+async def ensure_focus():
+    while True:
+        await asyncio.sleep(1)
+
+        cur_win_id = win32gui.FindWindow(None, get_foreground_window_title())
+        DATA.is_focused = cur_win_id == mc
+
+        if not DATA.is_focused:
+            print("Minecraft not focused!")
 
 
-print("Focus your Minecraft window!")
-time.sleep(1)
+async def main(host: str, port: int):
+    asyncio.create_task(ensure_focus())
 
-seconds = 3
-for ind in range(seconds):
-    print(seconds - ind)
+    await sio.connect(f"ws://{host}:{port}", transports="websocket")
+    print(f"Connected, sid is {sio.sid}")
+
+    # Wait for UUID to be set
+    await DATA.uuid_event.wait()
+    print(f"UUID is {DATA.uuid}")
+
+    # Free to do other stuff now
+    await sio.wait()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--host",
+        default="localhost",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8234,
+    )
+    args = parser.parse_args()
+
+    print("Focus your Minecraft window!")
     time.sleep(1)
 
-mc_window_title = get_foreground_window_title()
-mc = win32gui.FindWindow(None, mc_window_title)
-print(f"'{mc_window_title}' found with id [{mc}]")
+    seconds = 3
+    for ind in range(seconds):
+        print(seconds - ind)
+        time.sleep(1)
 
-while True:
-    time.sleep(seconds)
+    mc_window_title = get_foreground_window_title()
+    mc = win32gui.FindWindow(None, mc_window_title)
+    print(f"'{mc_window_title}' found with id [{mc}]")
 
-    # input("take screenshot [enter]")
-
-    cur_win_id = win32gui.FindWindow(None, get_foreground_window_title())
-    IS_FOCUSED = cur_win_id == mc
-
-    if not IS_FOCUSED:
-        print("Minecraft not focused!!")
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main(args.host, args.port))
+    loop.close()
+    ...
