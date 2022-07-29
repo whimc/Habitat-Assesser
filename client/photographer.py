@@ -75,12 +75,10 @@ async def connect_error(data):
 
 @sio.event
 async def disconnect():
-    print("I'm disconnected!")
     DATA.uuid = None
     DATA.uuid_event.clear()
-
-    await DATA.uuid_event.wait()
-    print(f"new uuid: {DATA.uuid}")
+    await sio.disconnect()
+    print("I'm disconnected!")
 
 
 @sio.event
