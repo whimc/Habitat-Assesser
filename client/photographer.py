@@ -30,6 +30,7 @@ class DataStore:
     uuid: str = None
     uuid_event = asyncio.Event()
     is_focused = False
+    screenshot_delay: int = None
 
 
 DATA = DataStore()  # Global shared data
@@ -100,9 +101,13 @@ async def screenshot(obs_id, user_caption):
         await sio.emit("screenshot_failed")
         return
 
-    print("Taking screenshot")
+    print(
+        f"Received screenshot request. Waiting {DATA.screenshot_delay} seconds to allow teleport to load"
+    )
+    # Give time for the picture to process
+    await asyncio.sleep(DATA.screenshot_delay)
+
     pydirectinput.keyDown("f2")
-    time.sleep(0.1)
     pydirectinput.keyUp("f2")
 
     # Give time for the picture to process
@@ -164,7 +169,15 @@ if __name__ == "__main__":
         type=int,
         default=8234,
     )
+    parser.add_argument(
+        "--screenshot-delay",
+        type=int,
+        help="Seconds to wait between teleporting and taking a screenshot.",
+        default=15,
+    )
     args = parser.parse_args()
+
+    DATA.screenshot_delay = args.screenshot_delay
 
     print("Focus your Minecraft window!")
     time.sleep(1)
