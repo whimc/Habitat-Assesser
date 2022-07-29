@@ -115,9 +115,9 @@ public class CameraOperator {
 
         String strippedObservation = ChatColor.stripColor(observation.getObservation());
 
-        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () ->
+        Bukkit.getScheduler().runTaskLaterAsynchronously(this.plugin, () ->
                 getClient().sendEvent("screenshot", observation.getId(), strippedObservation)
-        );
+        , 20);
     }
 
     public Player getPlayer() {
