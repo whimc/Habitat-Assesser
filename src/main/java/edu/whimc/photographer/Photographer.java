@@ -3,32 +3,25 @@ package edu.whimc.photographer;
 import com.corundumstudio.socketio.Configuration;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
-import com.gmail.filoghost.holographicdisplays.api.Hologram;
-import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
 import edu.whimc.observations.Observations;
 import edu.whimc.observations.models.Observation;
 import edu.whimc.observations.models.ObserveEvent;
 import edu.whimc.photographer.socket.Response;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.LinkedList;
+import java.util.Optional;
+import java.util.Queue;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class Photographer extends JavaPlugin implements Listener, TabCompleter {
+public final class Photographer extends JavaPlugin {
 
-    private SocketIOServer server;
-    private final Map<UUID, UUID> photographers = new HashMap<>();
+    private final Queue<ObserveEvent> photographs = new LinkedList<>();
+
+    private SocketIOServer socketServer;
     private Observations observationsPlugin;
 
     @Override
@@ -41,166 +34,96 @@ public final class Photographer extends JavaPlugin implements Listener, TabCompl
         config.setHostname(super.getConfig().getString("websocket.host"));
         config.setPort(super.getConfig().getInt("websocket.port"));
 
-        this.server = new SocketIOServer(config);
-        this.server.addConnectListener(client -> {
+        this.socketServer = new SocketIOServer(config);
+        this.socketServer.addConnectListener(client -> {
             UUID uuid = UUID.randomUUID();
             client.set("uuid", uuid);
             client.sendEvent("uuid", uuid);
-            Bukkit.broadcastMessage("connected to " + client.getRemoteAddress() + " [" + uuid + "]");
+            this.getLogger().info("connected to " + client.getRemoteAddress() + " [" + uuid + "]");
         });
 
-        this.server.addDisconnectListener(
-                client -> Bukkit.broadcastMessage("disconnected " + client.getRemoteAddress()));
+        this.socketServer.addDisconnectListener(client -> {
+                CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
+                    co.unregister();
+                    this.getLogger().info("Disconnected from " + co.getClient().getRemoteAddress() +
+                            " [" + co.getClientUuid() + "]");
+                });
+        });
 
-        server.addEventListener("test", String.class, (client, message, ackRequest) ->
-            Bukkit.broadcastMessage(client.getRemoteAddress() + " [" + client.get("uuid") + "]: " + message)
+        socketServer.addEventListener("test", String.class, (client, message, ackRequest) ->
+                Bukkit.broadcastMessage(client.getRemoteAddress() + " [" + client.get("uuid") + "]: " + message)
         );
 
-        server.addEventListener("screenshot_response", Response.class, (client, response, ackRequest) -> {
-            Bukkit.broadcastMessage("Observation ID: " + response.getObservationId());
-            Bukkit.broadcastMessage("Feedback: " + response.getFeedback());
-            Bukkit.broadcastMessage("Generated caption: " + response.getGeneratedCaption());
-            Bukkit.broadcastMessage("Score: " + response.getScore());
-        });
+        socketServer.addEventListener("screenshot_response", Response.class, (client, response, ackRequest) -> {
+            CameraOperator.getCameraOperator(response.getClientUuid()).ifPresent(co -> co.setCurrentEvent(null));
+            Observation observation = Observation.getObservation(response.getObservationId());
+            Player player = Bukkit.getPlayer(observation.getPlayer());
 
-        this.server.start();
+            this.getLogger().info("Observation ID: " + response.getObservationId());
+            this.getLogger().info("Feedback: " + response.getFeedback());
+            this.getLogger().info("Generated caption: " + response.getGeneratedCaption());
+            this.getLogger().info("Score: " + response.getScore());
 
-        getServer().getPluginManager().registerEvents(this, this);
-    }
-
-    @EventHandler
-    public void onObservation(ObserveEvent event) {
-        for (UUID uuid : this.photographers.keySet()) {
-            Player player = Bukkit.getPlayer(uuid);
             if (player == null) {
-                continue;
+                return;
             }
 
-            player.sendMessage("An observation has been made! Teleporting you to take a picture in 3 seconds");
+            player.sendMessage(ChatColor.BOLD + "" + ChatColor.AQUA + "Your observation has been analyzed!");
+            player.sendMessage(ChatColor.BOLD + "FEEDBACK: " + ChatColor.YELLOW + response.getFeedback());
+            player.sendMessage(ChatColor.BOLD + "GENERATED: " + ChatColor.GRAY + ChatColor.ITALIC + response.getGeneratedCaption());
+        });
 
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                Observation observation = event.getObservation();
+        socketServer.addEventListener("screenshot_failed", null, (client, response, ackRequest) -> {
+            // Re-add the event to the queue if the screenshot failed
+            CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
+                ObserveEvent event = co.getCurrentEvent();
+                co.setCurrentEvent(null);
+                this.photographs.add(event);
+                this.getLogger().warning("Observation " + event.getObservation().getId() +
+                        " could not be screenshotted. Re-adding to queue");
+            });
+        });
 
-                // Make the observation invisible
-                for (Hologram hologram : HologramsAPI.getHolograms(this.observationsPlugin)) {
-                    hologram.getVisibilityManager().hideTo(player);
-                }
-                player.teleport(observation.getViewLocation());
+        this.socketServer.start();
 
-                UUID clientUuid = this.photographers.get(player.getUniqueId());
-                SocketIOClient client = getClient(clientUuid);
+        // Queue up some events
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
+            if (this.photographs.isEmpty()) {
+                return;
+            }
+            CameraOperator.getAvailableOperator().ifPresent(co -> co.photograph(this.photographs.poll()));
+        }, 20, 20);
 
-                String strippedObservation = ChatColor.stripColor(observation.getObservation());
+        getServer().getPluginManager().registerEvents(new Listeners(this), this);
 
-                player.sendMessage("Taking picture in 5 seconds");
-                Bukkit.getScheduler().runTaskLaterAsynchronously(this, () -> {
-                    client.sendEvent("screenshot", observation.getId(), strippedObservation);
-                }, 20 * 5);
-
-            }, 20 * 3);
-        }
+        PluginCommand cmd = getCommand("photographer");
+        PhotographerCommand photographerCommand = new PhotographerCommand(this);
+        cmd.setExecutor(photographerCommand);
+        cmd.setTabCompleter(photographerCommand);
     }
 
     @Override
     public void onDisable() {
-        this.server.stop();
+        CameraOperator.getAllCameraOperators().forEach(co -> co.unregister());
+        this.socketServer.stop();
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length == 0) {
-            sender.sendMessage("/photographer clients");
-            sender.sendMessage("/photographer disconnect-all");
-            sender.sendMessage("/photographer collect <uuid>");
-            sender.sendMessage("/photographer disconnect <uuid>");
-            sender.sendMessage("/photographer send <uuid> <msg>");
-            return true;
-        }
-
-        String subCmd = args[0];
-
-        if (subCmd.equalsIgnoreCase("clients")) {
-            sender.sendMessage("Clients:");
-            for (SocketIOClient client : this.server.getAllClients()) {
-                sender.sendMessage(client.getRemoteAddress() + ": " + client.get("uuid"));
-            }
-
-            return true;
-        }
-
-        if (subCmd.equalsIgnoreCase("disconnect-all")) {
-            for (SocketIOClient client : this.server.getAllClients()) {
-                sender.sendMessage("Disconnecting " + client.getRemoteAddress() + ": " + client.get("uuid"));
-                client.disconnect();
-            }
-            return true;
-        }
-
-        if (args.length < 2) {
-            return true;
-        }
-
-        UUID uuid = UUID.fromString(args[1]);
-        SocketIOClient client = getClient(uuid);
-
-        if (client == null) {
-            sender.sendMessage("Client not found");
-            return true;
-        }
-
-        if (subCmd.equalsIgnoreCase("disconnect")) {
-            sender.sendMessage("Disconnecting " + client.getRemoteAddress() + ": " + client.get("uuid"));
-            client.disconnect();
-            return true;
-        }
-
-        if (subCmd.equalsIgnoreCase("collect")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("You have to be a player");
-            }
-            Player player = (Player) sender;
-            player.sendMessage("You have become a photographer for " + client.get("uuid"));
-            this.photographers.put(player.getUniqueId(), client.get("uuid"));
-            return true;
-        }
-
-        if (subCmd.equalsIgnoreCase("send")) {
-            if (args.length <= 2) {
-                sender.sendMessage("/photographer send <uuid> <msg>");
-                return true;
-            }
-
-            String message = StringUtils.join(args, " ", 2, args.length);
-            Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-                client.sendEvent("message", message);
-            });
-            return true;
-        }
-
-//        this.server.getBroadcastOperations().sendEvent("test", new VoidAckCallback() {
-//            @Override
-//            protected void onSuccess() {
-//                Bukkit.broadcastMessage("done!");
-//            }
-//        }, "test");
-
-        return true;
+    public void queuePhotograph(ObserveEvent event) {
+        this.photographs.add(event);
     }
 
-    private SocketIOClient getClient(UUID clientUuid) {
-        for (SocketIOClient client : this.server.getAllClients()) {
-            if (client.get("uuid").equals(clientUuid)) {
-                return client;
-            }
-        }
-
-        return null;
+    public SocketIOServer getSocketServer() {
+        return this.socketServer;
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        return this.server.getAllClients().stream()
-                .map(client-> client.get("uuid").toString())
-                .collect(Collectors.toList());
+    public Observations getObservationsPlugin() {
+        return this.observationsPlugin;
     }
+
+    public Optional<SocketIOClient> getClient(UUID clientUuid) {
+        return this.socketServer.getAllClients().stream()
+                .filter(c -> c.get("uuid").equals(clientUuid))
+                .findFirst();
+    }
+
 }
