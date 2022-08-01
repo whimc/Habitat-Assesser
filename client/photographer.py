@@ -29,8 +29,9 @@ API_URL = "http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/caption
 class DataStore:
     uuid: str = None
     uuid_event = asyncio.Event()
-    is_focused = False
     screenshot_delay: int = None
+    is_focused = False
+    is_event_in_progress = False
 
 
 DATA = DataStore()  # Global shared data
@@ -59,7 +60,6 @@ async def call_api(screenshot_path: Path, user_caption: str) -> dict:
     return json.loads(raw_data)
 
 
-# TODO use asyncio
 sio = socketio.AsyncClient()
 
 
@@ -75,10 +75,15 @@ async def connect_error(data):
 
 @sio.event
 async def disconnect():
+    if DATA.is_event_in_progress:
+        print("Screenshot in progress when shutting down!")
+        await sio.emit("screenshot_failed")
+        DATA.is_event_in_progress = False
+
     DATA.uuid = None
     DATA.uuid_event.clear()
     await sio.disconnect()
-    print("I'm disconnected!")
+    print("Client disconnected")
 
 
 @sio.event
@@ -94,11 +99,19 @@ async def message(msg):
 
 @sio.event
 async def screenshot(obs_id, user_caption):
+    print(f"Received screenshot request: id={obs_id},caption='{user_caption}'")
+
     if not DATA.is_focused:
         print("Minecraft not focused - failed to take a screenshot!")
-        await sio.emit("screenshot_failed")
+        await sio.emit("screenshot_failed", obs_id)
         return
 
+    if DATA.is_event_in_progress:
+        print("Screenshot already in progress!")juki
+        await sio.emit("screenshot_failed", obs_id)
+        return
+
+    DATA.is_event_in_progress = True
     print(
         f"Received screenshot request. Waiting {DATA.screenshot_delay} seconds to allow teleport to load"
     )
@@ -129,6 +142,7 @@ async def screenshot(obs_id, user_caption):
             "score": data["score"],
         },
     )
+    DATA.is_event_in_progress = False
 
 
 async def ensure_focus():
