@@ -20,9 +20,17 @@ from typing import Optional
 from ctypes import windll, create_unicode_buffer
 from pathlib import Path
 from dataclasses import dataclass
+from rich.console import Group
+from rich.live import Live
+from rich.table import Table
+from rich.layout import Layout
+from rich.console import Console
+from rich.panel import Panel
+from rich.status import Status
 
 SCREENSHOTS_DIR = Path("~/AppData/Roaming/.minecraft/screenshots").expanduser().resolve()
 API_URL = "http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/caption-image"
+SIO = socketio.AsyncClient()
 
 
 @dataclass
@@ -30,11 +38,18 @@ class DataStore:
     uuid: str = None
     uuid_event = asyncio.Event()
     screenshot_delay: int = None
-    is_focused = False
+    mc_window_id = None
+    mc_window_title = None
     is_event_in_progress = False
+    is_focused = False
 
 
 DATA = DataStore()  # Global shared data
+
+# Rich output stuff
+CONSOLE = Console()
+CONNECTION_LOADING = Status("[bright_red]Connecting to server")
+FOCUS_LOADING = Status("[red]Minecraft not focused")
 
 
 def get_foreground_window_title() -> Optional[str]:
@@ -60,59 +75,58 @@ async def call_api(screenshot_path: Path, user_caption: str) -> dict:
     return json.loads(raw_data)
 
 
-sio = socketio.AsyncClient()
+async def update_is_focused():
+    cur_win_id = win32gui.FindWindow(None, get_foreground_window_title())
+    DATA.is_focused = DATA.mc_window_id == cur_win_id
+    if not DATA.is_focused:
+        FOCUS_LOADING.update(f"[red]Minecraft not focused ('{DATA.mc_window_title}')")
 
 
-@sio.event
-async def connect():
-    print("I'm connected!")
-
-
-@sio.event
+@SIO.event
 async def connect_error(data):
-    print(f"The connection failed! [{data}]")
+    CONSOLE.log(f"[bright_red]The connection failed! [{data}]")
 
 
-@sio.event
+@SIO.event
 async def disconnect():
     if DATA.is_event_in_progress:
-        print("Screenshot in progress when shutting down!")
-        await sio.emit("screenshot_failed")
+        CONSOLE.log("Screenshot in progress when shutting down!")
+        await SIO.emit("screenshot_failed")
         DATA.is_event_in_progress = False
 
     DATA.uuid = None
     DATA.uuid_event.clear()
-    await sio.disconnect()
-    print("Client disconnected")
+    await SIO.disconnect()
+    CONSOLE.log("Client disconnected")
 
 
-@sio.event
+@SIO.event
 async def uuid(data):
     DATA.uuid = data
     DATA.uuid_event.set()
 
 
-@sio.event
+@SIO.event
 async def message(msg):
-    print(f"Message from server: {msg}")
+    CONSOLE.log(f"Message from server: {msg}")
 
 
-@sio.event
+@SIO.event
 async def screenshot(obs_id, user_caption):
-    print(f"Received screenshot request: id={obs_id},caption='{user_caption}'")
+    CONSOLE.log(f"Received screenshot request: id={obs_id},caption='{user_caption}'")
 
     if not DATA.is_focused:
-        print("Minecraft not focused - failed to take a screenshot!")
-        await sio.emit("screenshot_failed", obs_id)
+        CONSOLE.log("Minecraft not focused - failed to take a screenshot!")
+        await SIO.emit("screenshot_failed", obs_id)
         return
 
     if DATA.is_event_in_progress:
-        print("Screenshot already in progress!")juki
-        await sio.emit("screenshot_failed", obs_id)
+        CONSOLE.log("Screenshot already in progress!")
+        await SIO.emit("screenshot_failed", obs_id)
         return
 
     DATA.is_event_in_progress = True
-    print(
+    CONSOLE.log(
         f"Received screenshot request. Waiting {DATA.screenshot_delay} seconds to allow teleport to load"
     )
     # Give time for the picture to process
@@ -124,15 +138,15 @@ async def screenshot(obs_id, user_caption):
     # Give time for the picture to process
     await asyncio.sleep(2)
 
-    print("Grabbing most recent screenshot")
+    CONSOLE.log("Grabbing most recent screenshot")
     ss_path = get_newest_screenshot()
 
-    print(f"Calling API with picture {ss_path}")
+    CONSOLE.log(f"Calling API with picture {ss_path}")
     data = await call_api(ss_path, user_caption)
-    print(f"response: {data}")
+    CONSOLE.log(f"response: {data}")
 
-    print("sending response to server")
-    await sio.emit(
+    CONSOLE.log("sending response to server")
+    await SIO.emit(
         "screenshot_response",
         data={
             "clientUuid": DATA.uuid,
@@ -145,29 +159,36 @@ async def screenshot(obs_id, user_caption):
     DATA.is_event_in_progress = False
 
 
-async def ensure_focus():
-    while True:
-        await asyncio.sleep(1)
+async def handle_gui(args):
+    with Live(console=CONSOLE, refresh_per_second=10) as live_table:
+        while True:
+            await asyncio.sleep(0.1)
+            await update_is_focused()
+            live_table.update(
+                Group(
+                    f":white_check_mark:{args.host}:{args.port} \[[gray]{DATA.uuid}]"
+                    if DATA.uuid is not None
+                    else CONNECTION_LOADING,
+                    f":white_check_mark:Focused ('{DATA.mc_window_title}')"
+                    if DATA.is_focused
+                    else FOCUS_LOADING,
+                )
+            )
 
-        cur_win_id = win32gui.FindWindow(None, get_foreground_window_title())
-        DATA.is_focused = cur_win_id == mc
 
-        if not DATA.is_focused:
-            print("Minecraft not focused!")
+async def main(args):
+    asyncio.create_task(handle_gui(args))
 
-
-async def main(host: str, port: int):
-    asyncio.create_task(ensure_focus())
-
-    await sio.connect(f"ws://{host}:{port}", transports="websocket")
-    print(f"Connected, sid is {sio.sid}")
+    url = f"ws://{args.host}:{args.port}"
+    CONSOLE.log(f"connecting to {url}")
+    await SIO.connect(url, transports="websocket")
 
     # Wait for UUID to be set
     await DATA.uuid_event.wait()
-    print(f"UUID is {DATA.uuid}")
+    CONSOLE.log(f"UUID is {DATA.uuid}")
 
     # Free to do other stuff now
-    await sio.wait()
+    await SIO.wait()
 
 
 if __name__ == "__main__":
@@ -191,19 +212,20 @@ if __name__ == "__main__":
 
     DATA.screenshot_delay = args.screenshot_delay
 
-    print("Focus your Minecraft window!")
+    CONSOLE.log("Focus your Minecraft window!")
     time.sleep(1)
 
     seconds = 3
     for ind in range(seconds):
-        print(seconds - ind)
+        CONSOLE.log(seconds - ind)
         time.sleep(1)
 
     mc_window_title = get_foreground_window_title()
-    mc = win32gui.FindWindow(None, mc_window_title)
-    print(f"'{mc_window_title}' found with id [{mc}]")
+    mc_window_id = win32gui.FindWindow(None, mc_window_title)
+    DATA.mc_window_id = mc_window_id
+    DATA.mc_window_title = mc_window_title
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(args.host, args.port))
+    loop.run_until_complete(main(args))
     loop.close()
     ...
