@@ -68,9 +68,16 @@ public final class Photographer extends JavaPlugin {
                 return;
             }
 
-            player.sendMessage(ChatColor.BOLD + "" + ChatColor.AQUA + "Your observation has been analyzed!");
-            player.sendMessage(ChatColor.BOLD + "FEEDBACK: " + ChatColor.YELLOW + response.getFeedback());
-            player.sendMessage(ChatColor.BOLD + "GENERATED: " + ChatColor.GRAY + ChatColor.ITALIC + response.getGeneratedCaption());
+            Utils.msg(player, "&m                                                                                 ");
+            Utils.msg(player, "&b&lYour observation has been analyzed!");
+            Utils.msg(player, "");
+            Utils.msg(player, "&e&lFEEDBACK:");
+            Utils.msg(player, "    &6" + response.getFeedback());
+            Utils.msg(player, "");
+            Utils.msg(player, "&e&lGENERATED:");
+            Utils.msg(player, "    &6" + response.getGeneratedCaption());
+            Utils.msg(player, "");
+            Utils.msg(player, "&m                                                                                 ");
         });
 
         socketServer.addEventListener("screenshot_failed", null, (client, response, ackRequest) -> {
