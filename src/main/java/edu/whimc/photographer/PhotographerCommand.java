@@ -32,22 +32,17 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 0) {
-            sender.sendMessage("/photographer clients");
-            sender.sendMessage("/photographer disconnect-all");
-            sender.sendMessage("/photographer collect <uuid>");
-            sender.sendMessage("/photographer stop-collecting");
-            sender.sendMessage("/photographer disconnect <uuid>");
-            sender.sendMessage("/photographer send <uuid> <msg>");
+            sendUsage(sender);
             return true;
         }
 
         String subCmd = args[0];
 
         if (subCmd.equalsIgnoreCase("clients")) {
-            sender.sendMessage("Clients:");
+            Utils.msg(sender, "&b&lClients:");
             for (SocketIOClient client : this.plugin.getSocketServer().getAllClients()) {
-                sender.sendMessage("> " + ChatColor.AQUA + client.get("uuid"));
-                sender.sendMessage("|  IP: " + ChatColor.AQUA + client.getRemoteAddress());
+                Utils.msg(sender, "> &b" + client.get("uuid"));
+                Utils.msg(sender, "|  IP: &b" + client.getRemoteAddress());
                 CameraOperator.getCameraOperator(client.get("uuid")).ifPresentOrElse(
                         co -> Utils.msg(sender, "|  Player: &b" + co.getPlayer().getName() + " &7("
                                 + (co.isAvailable() ? "&aAvailable" : "&cBusy") + "&7)"),
@@ -79,7 +74,7 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             CameraOperator.getCameraOperator(((Player) sender).getUniqueId()).ifPresentOrElse(
-                    co -> co.unregister(),
+                    CameraOperator::unregister,
                     () -> sender.sendMessage("You are not a photographer!"));
             return true;
         }
@@ -114,12 +109,15 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
         if (subCmd.equalsIgnoreCase("collect")) {
             if (!(sender instanceof Player)) {
                 sender.sendMessage(ChatColor.RED + "You have to be a player");
+                return true;
             }
             Player player = (Player) sender;
 
             Optional<CameraOperator> camera = CameraOperator.registerCameraOperator(this.plugin, player, client);
             if (camera.isPresent()) {
-                player.sendMessage(ChatColor.GREEN + "You have become a photographer for " + client.get("uuid"));
+                Utils.msg(player, "&aYou have become a photographer for " + client.get("uuid"));
+                Utils.msg(player, "&7There are &f&l" + this.plugin.getEventQueue().size() +
+                        "&7 queued observations");
             } else {
                 player.sendMessage(ChatColor.RED + "You are already collecting or that client is in use");
             }

@@ -64,7 +64,7 @@ public class CameraOperator {
 
     public void unregister() {
         Player player = getPlayer();
-        player.sendMessage(ChatColor.GOLD + "" + ChatColor.GOLD + "You are no longer a photographer");
+        Utils.msg(player, "&6&lYou are no longer a photographer");
         CameraOperator.operators.remove(this);
 
         Bukkit.getScheduler().runTask(this.plugin, () -> {
@@ -104,8 +104,8 @@ public class CameraOperator {
     public void photograph(ObserveEvent event) {
         this.currentEvent = event;
         Player player = getPlayer();
-        player.sendMessage(ChatColor.YELLOW + event.getPlayer().getName() + " made an observation. " +
-                "Teleporting to view location for photograph.");
+        Utils.msg(player, "&ePhotographing observation &6&lID " + event.getObservation().getId() +
+                "&e from &6&l" + event.getObservation().getPlayer());
 
         Observation observation = event.getObservation();
 

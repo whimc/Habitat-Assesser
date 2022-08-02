@@ -42,13 +42,12 @@ public final class Photographer extends JavaPlugin {
             this.getLogger().info("connected to " + client.getRemoteAddress() + " [" + uuid + "]");
         });
 
-        this.socketServer.addDisconnectListener(client -> {
-                CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
+        this.socketServer.addDisconnectListener(
+                client -> CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
                     co.unregister();
                     this.getLogger().info("Disconnected from " + co.getClient().getRemoteAddress() +
                             " [" + co.getClientUuid() + "]");
-                });
-        });
+                }));
 
         socketServer.addEventListener("test", String.class, (client, message, ackRequest) ->
                 Bukkit.broadcastMessage(client.getRemoteAddress() + " [" + client.get("uuid") + "]: " + message)
@@ -111,7 +110,7 @@ public final class Photographer extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        CameraOperator.getAllCameraOperators().forEach(co -> co.unregister());
+        CameraOperator.getAllCameraOperators().forEach(CameraOperator::unregister);
         this.socketServer.stop();
     }
 
