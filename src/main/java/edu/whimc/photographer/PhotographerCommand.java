@@ -1,11 +1,12 @@
 package edu.whimc.photographer;
 
 import com.corundumstudio.socketio.SocketIOClient;
-import java.util.Arrays;
+import edu.whimc.observations.models.ObserveEvent;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -48,8 +49,17 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage("> " + ChatColor.AQUA + client.get("uuid"));
                 sender.sendMessage("|  IP: " + ChatColor.AQUA + client.getRemoteAddress());
                 CameraOperator.getCameraOperator(client.get("uuid")).ifPresentOrElse(
-                        co -> sender.sendMessage("|  Player: " + ChatColor.AQUA + co.getPlayer().getName()),
-                        () -> sender.sendMessage("|  Player: " + ChatColor.DARK_GRAY + "N/A"));
+                        co -> Utils.msg(sender, "|  Player: &b" + co.getPlayer().getName() + " &7("
+                                + (co.isAvailable() ? "&aAvailable" : "&cBusy") + "&7)"),
+                        () -> Utils.msg(sender, "|  Player: &8" + "N/A"));
+            }
+            return true;
+        }
+
+        if (subCmd.equalsIgnoreCase("queue")) {
+            Utils.msg(sender, "&b&lQueued observations:");
+            for (ObserveEvent event : this.plugin.getEventQueue()) {
+                Utils.msg(sender, event.getObservation().toString());
             }
             return true;
         }
@@ -130,20 +140,38 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        sendUsage(sender);
         return true;
     }
 
-
+    private void sendUsage(CommandSender sender) {
+        Utils.msg(sender,
+                "&e/photographer &6clients",
+                "&e/photographer &6queue",
+                "&e/photographer &6disconnect-all",
+                "&e/photographer &6collect &7<uuid>",
+                "&e/photographer &6stop-collecting",
+                "&e/photographer &6disconnect &7<uuid>",
+                "&e/photographer &6send &7<uuid> <msg>"
+        );
+    }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length <= 1) {
-            return Arrays.asList("clients", "disconnect-all", "disconnect", "collect", "send", "stop-collecting").stream()
-                    .filter(arg -> arg.startsWith(args[0].toLowerCase()))
+            return Stream.of(
+                            "clients",
+                            "queue",
+                            "disconnect-all",
+                            "collect",
+                            "stop-collecting",
+                            "disconnect",
+                            "send"
+                    ).filter(arg -> arg.startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
         }
         return this.plugin.getSocketServer().getAllClients().stream()
-                .map(client-> client.get("uuid").toString())
+                .map(client -> client.get("uuid").toString())
                 .collect(Collectors.toList());
     }
 

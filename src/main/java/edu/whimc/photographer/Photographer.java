@@ -112,6 +112,10 @@ public final class Photographer extends JavaPlugin {
         this.photographs.add(event);
     }
 
+    public Queue<ObserveEvent> getEventQueue() {
+        return this.photographs;
+    }
+
     public SocketIOServer getSocketServer() {
         return this.socketServer;
     }
