@@ -1,6 +1,7 @@
 package edu.whimc.photographer;
 
 import com.corundumstudio.socketio.SocketIOClient;
+import edu.whimc.observations.models.Observation;
 import edu.whimc.observations.models.ObserveEvent;
 import java.util.List;
 import java.util.Optional;
@@ -53,8 +54,8 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
 
         if (subCmd.equalsIgnoreCase("queue")) {
             Utils.msg(sender, "&b&lQueued observations:");
-            for (ObserveEvent event : this.plugin.getEventQueue()) {
-                Utils.msg(sender, event.getObservation().toString());
+            for (Observation observation : this.plugin.getObservationQueue()) {
+                Utils.msg(sender, observation.toString());
             }
             return true;
         }
@@ -116,7 +117,7 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
             Optional<CameraOperator> camera = CameraOperator.registerCameraOperator(this.plugin, player, client);
             if (camera.isPresent()) {
                 Utils.msg(player, "&aYou have become a photographer for " + client.get("uuid"));
-                Utils.msg(player, "&7There are &f&l" + this.plugin.getEventQueue().size() +
+                Utils.msg(player, "&7There are &f&l" + this.plugin.getObservationQueue().size() +
                         "&7 queued observations");
             } else {
                 player.sendMessage(ChatColor.RED + "You are already collecting or that client is in use");

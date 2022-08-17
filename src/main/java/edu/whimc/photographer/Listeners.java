@@ -17,7 +17,7 @@ public class Listeners implements Listener {
 
     @EventHandler
     public void onObservation(ObserveEvent event) {
-        this.plugin.queuePhotograph(event);
+        this.plugin.queueObservationPhotograph(event.getObservation());
 
         // Wait a few ticks for the hologram to spawn
         Bukkit.getScheduler().runTaskLater(this.plugin, () -> {

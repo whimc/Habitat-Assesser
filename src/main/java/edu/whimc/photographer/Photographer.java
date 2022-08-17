@@ -5,21 +5,19 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import edu.whimc.observations.Observations;
 import edu.whimc.observations.models.Observation;
-import edu.whimc.observations.models.ObserveEvent;
 import edu.whimc.photographer.socket.Response;
 import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.UUID;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Photographer extends JavaPlugin {
 
-    private final Queue<ObserveEvent> photographs = new LinkedList<>();
+    private final Queue<Observation> observationQueue = new LinkedList<>();
 
     private SocketIOServer socketServer;
     private Observations observationsPlugin;
@@ -44,9 +42,9 @@ public final class Photographer extends JavaPlugin {
 
         this.socketServer.addDisconnectListener(
                 client -> CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
-                    co.unregister();
                     this.getLogger().info("Disconnected from " + co.getClient().getRemoteAddress() +
                             " [" + co.getClientUuid() + "]");
+                    co.unregister();
                 }));
 
         socketServer.addEventListener("test", String.class, (client, message, ackRequest) ->
@@ -54,7 +52,7 @@ public final class Photographer extends JavaPlugin {
         );
 
         socketServer.addEventListener("screenshot_response", Response.class, (client, response, ackRequest) -> {
-            CameraOperator.getCameraOperator(response.getClientUuid()).ifPresent(co -> co.setCurrentEvent(null));
+            CameraOperator.getCameraOperator(response.getClientUuid()).ifPresent(co -> co.setCurrentObservation(null));
             Observation observation = Observation.getObservation(response.getObservationId());
             Player player = Bukkit.getPlayer(observation.getPlayer());
 
@@ -79,13 +77,16 @@ public final class Photographer extends JavaPlugin {
             Utils.msg(player, "&m                                                                                 ");
         });
 
-        socketServer.addEventListener("screenshot_failed", null, (client, response, ackRequest) -> {
+        socketServer.addEventListener("screenshot_failed", int.class, (client, failed_id, ackRequest) -> {
             // Re-add the event to the queue if the screenshot failed
+
             CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
-                ObserveEvent event = co.getCurrentEvent();
-                co.setCurrentEvent(null);
-                this.photographs.add(event);
-                this.getLogger().warning("Observation " + event.getObservation().getId() +
+                Observation observation = Observation.getObservation(failed_id);
+                if (co.getCurrentObservation().getId() == failed_id) {
+                    co.setCurrentObservation(null);
+                }
+                this.observationQueue.add(observation);
+                this.getLogger().warning("Observation " + observation.getId() +
                         " could not be screenshotted. Re-adding to queue");
             });
         });
@@ -94,10 +95,10 @@ public final class Photographer extends JavaPlugin {
 
         // Queue up some events
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
-            if (this.photographs.isEmpty()) {
+            if (this.observationQueue.isEmpty()) {
                 return;
             }
-            CameraOperator.getAvailableOperator().ifPresent(co -> co.photograph(this.photographs.poll()));
+            CameraOperator.getAvailableOperator().ifPresent(co -> co.photograph(this.observationQueue.poll()));
         }, 20, 20);
 
         getServer().getPluginManager().registerEvents(new Listeners(this), this);
@@ -114,12 +115,12 @@ public final class Photographer extends JavaPlugin {
         this.socketServer.stop();
     }
 
-    public void queuePhotograph(ObserveEvent event) {
-        this.photographs.add(event);
+    public void queueObservationPhotograph(Observation observation) {
+        this.observationQueue.add(observation);
     }
 
-    public Queue<ObserveEvent> getEventQueue() {
-        return this.photographs;
+    public Queue<Observation> getObservationQueue() {
+        return this.observationQueue;
     }
 
     public SocketIOServer getSocketServer() {

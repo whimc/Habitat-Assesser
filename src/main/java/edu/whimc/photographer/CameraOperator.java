@@ -3,7 +3,6 @@ package edu.whimc.photographer;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
 import edu.whimc.observations.models.Observation;
-import edu.whimc.observations.models.ObserveEvent;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Optional;
@@ -28,7 +27,7 @@ public class CameraOperator {
     private GameMode prevGameMode;
     private Location prevLocation;
 
-    private @Nullable ObserveEvent currentEvent = null;
+    private @Nullable Observation currentObservation = null;
 
     private CameraOperator(Photographer plugin, Player player, SocketIOClient client) {
         this.plugin = plugin;
@@ -106,22 +105,22 @@ public class CameraOperator {
         return Optional.empty();
     }
 
-    public void photograph(ObserveEvent event) {
-        this.currentEvent = event;
+    public void photograph(Observation observation) {
+        this.currentObservation = observation;
         Player player = getPlayer();
-        Utils.msg(player, "&ePhotographing observation &6&lID " + event.getObservation().getId() +
-                "&e from &6&l" + event.getObservation().getPlayer());
+        Utils.msg(player, "&ePhotographing observation &6&lID " + observation.getId() +
+                "&e from &6&l" + observation.getPlayer());
 
-        Observation observation = event.getObservation();
-
-        // Make the observation invisible
-        observation.getHologram().getVisibilityManager().hideTo(player);
+        // Make the observation invisible if the hologram exists
+        if (observation.getHologram() != null) {
+            observation.getHologram().getVisibilityManager().hideTo(player);
+        }
         player.teleport(observation.getViewLocation());
 
         String strippedObservation = ChatColor.stripColor(observation.getObservation());
 
         Bukkit.getScheduler().runTaskLaterAsynchronously(this.plugin, () ->
-                getClient().sendEvent("screenshot", observation.getId(), strippedObservation)
+                getClient().sendEvent("screenshot", observation.getId(), player.getName(), strippedObservation)
         , 20);
     }
 
@@ -130,7 +129,7 @@ public class CameraOperator {
     }
 
     public boolean isAvailable() {
-        return this.currentEvent == null;
+        return this.currentObservation == null;
     }
 
     public UUID getPlayerUuid() {
@@ -141,12 +140,12 @@ public class CameraOperator {
         return this.clientUuid;
     }
 
-    public @Nullable ObserveEvent getCurrentEvent() {
-        return this.currentEvent;
+    public @Nullable Observation getCurrentObservation() {
+        return this.currentObservation;
     }
 
-    public void setCurrentEvent(@Nullable ObserveEvent event) {
-        this.currentEvent = event;
+    public void setCurrentObservation(@Nullable Observation observation) {
+        this.currentObservation = observation;
     }
 
     public SocketIOClient getClient() {
