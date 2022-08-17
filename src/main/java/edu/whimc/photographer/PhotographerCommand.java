@@ -60,6 +60,30 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (subCmd.equalsIgnoreCase("queue-clear")) {
+            int numCleared = this.plugin.getObservationQueue().size();
+            this.plugin.getObservationQueue().clear();
+            Utils.msg(sender, "&aCleared " + numCleared + " queued observations");
+            return true;
+        }
+
+        if (subCmd.equalsIgnoreCase("queue-remove")) {
+            if (args.length < 2) {
+                Utils.msg(sender, "&o/photographer queue-remove <id>");
+                return true;
+            }
+
+            String obs_id = args[1];
+            boolean removed = this.plugin.getObservationQueue().removeIf(obs -> String.valueOf(obs.getId()).equals(obs_id));
+            if (removed) {
+                Utils.msg(sender, "&aRemoved observation " + obs_id + " from the queue");
+            } else {
+                Utils.msg(sender, "&cNo observation with id " + obs_id + " found in queue");
+            }
+
+            return true;
+        }
+
         if (subCmd.equalsIgnoreCase("disconnect-all")) {
             this.plugin.getSocketServer().getAllClients().forEach(client -> {
                 sender.sendMessage("Disconnecting " + client.getRemoteAddress() + ": " + client.get("uuid"));
@@ -147,6 +171,8 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
         Utils.msg(sender,
                 "&e/photographer &6clients",
                 "&e/photographer &6queue",
+                "&e/photographer &6queue-clear",
+                "&e/photographer &6queue-remove <id>",
                 "&e/photographer &6disconnect-all",
                 "&e/photographer &6collect &7<uuid>",
                 "&e/photographer &6stop-collecting",
@@ -161,6 +187,8 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
             return Stream.of(
                             "clients",
                             "queue",
+                            "queue-clear",
+                            "queue-remove",
                             "disconnect-all",
                             "collect",
                             "stop-collecting",
