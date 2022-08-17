@@ -59,6 +59,9 @@ public class CameraOperator {
                 hologram.getVisibilityManager().hideTo(player));
 
         CameraOperator.operators.add(operator);
+
+        client.sendEvent("cameraman_connect", player.getName());
+
         return Optional.of(operator);
     }
 
@@ -66,6 +69,8 @@ public class CameraOperator {
         Player player = getPlayer();
         Utils.msg(player, "&6&lYou are no longer a photographer");
         CameraOperator.operators.remove(this);
+
+        getClient().sendEvent("cameraman_disconnect", player.getName());
 
         Bukkit.getScheduler().runTask(this.plugin, () -> {
             // Restore the state of the player

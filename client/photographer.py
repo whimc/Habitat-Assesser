@@ -72,6 +72,7 @@ ARGS = Args()  # Global args
 CONSOLE = Console()
 CONNECTION_LOADING = Status("[bright_red]Connecting to server")
 CAMERAMAN_LOADING = Status("[bright_red]Waiting for cameraman to connect")
+OBSERVATION_WAITING = Status("[bright_green]Ready for observation")
 
 
 def log(msg):
@@ -169,6 +170,18 @@ async def uuid(data):
 
 
 @SIO.event
+async def cameraman_connect(player):
+    log(f"New cameraman connected: {player}")
+    DATA.cameraman = player
+
+
+@SIO.event
+async def cameraman_disconnect(player):
+    log(f"Camerman ({player}) disconnected")
+    DATA.cameraman = None
+
+
+@SIO.event
 async def message(msg):
     log(f"Message from server: {msg}")
     if msg == "screenshot":
@@ -176,17 +189,15 @@ async def message(msg):
 
 
 @SIO.event
-async def screenshot(obs_id, user_caption):
+async def screenshot(obs_id, user_name, user_caption):
     log(f"Received screenshot request: id={obs_id},caption='{user_caption}'")
 
     if DATA.is_event_in_progress:
         await screenshot_failed("Screenshot already in progress!", obs_id)
         return
 
-    DATA.observation = Observation(obs_id, None, user_caption)
-    log(
-        f"Received screenshot request. Waiting {ARGS.screenshot_delay} seconds to allow teleport to load"
-    )
+    DATA.observation = Observation(obs_id, user_name, user_caption)
+    log(f"Received screenshot request. Waiting {ARGS.screenshot_delay}s to allow teleport to load")
     # Give time for the picture to process
     await asyncio.sleep(ARGS.screenshot_delay)
 
@@ -221,18 +232,28 @@ async def screenshot(obs_id, user_caption):
 async def handle_gui():
     with Live(console=CONSOLE, refresh_per_second=10) as live_table:
         while True:
-            await asyncio.sleep(0.1)
-            live_table.update(
-                Group(
-                    f":earth_americas: Minecraft Window '{DATA.mc_window_title}' ({DATA.mc_window_id})",
-                    f":white_check_mark:{ARGS.host}:{ARGS.port} \[[gray]{DATA.uuid}]"
-                    if DATA.uuid is not None
-                    else CONNECTION_LOADING,
-                    f":white_check_mark:Cameraman: [aqua]{DATA.cameraman}')"
-                    if DATA.cameraman
-                    else CAMERAMAN_LOADING,
+            group = [
+                # Window
+                f":earth_americas: Minecraft Window '{DATA.mc_window_title}' ({DATA.mc_window_id})",
+                # Server connection
+                f":white_check_mark:{ARGS.host}:{ARGS.port} \[{DATA.uuid}]"
+                if DATA.uuid is not None
+                else CONNECTION_LOADING,
+                # Cameraman label
+                f":white_check_mark:Cameraman: [aqua]{DATA.cameraman}[/]"
+                if DATA.cameraman
+                else CAMERAMAN_LOADING,
+            ]
+
+            if DATA.cameraman:
+                group.append(
+                    f"Processing {DATA.observation}"
+                    if DATA.is_event_in_progress
+                    else OBSERVATION_WAITING
                 )
-            )
+
+            await asyncio.sleep(0.1)
+            live_table.update(Group(*group))
 
 
 async def main():
