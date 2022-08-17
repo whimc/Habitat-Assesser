@@ -53,14 +53,13 @@ public final class Photographer extends JavaPlugin {
 
         socketServer.addEventListener("screenshot_response", Response.class, (client, response, ackRequest) -> {
             CameraOperator.getCameraOperator(response.getClientUuid()).ifPresent(co -> co.setCurrentObservation(null));
-            Observation observation = Observation.getObservation(response.getObservationId());
-            Player player = Bukkit.getPlayer(observation.getPlayer());
 
             this.getLogger().info("Observation ID: " + response.getObservationId());
             this.getLogger().info("Feedback: " + response.getFeedback());
             this.getLogger().info("Generated caption: " + response.getGeneratedCaption());
             this.getLogger().info("Score: " + response.getScore());
 
+            Player player = Bukkit.getPlayer(response.getPlayerName());
             if (player == null) {
                 return;
             }

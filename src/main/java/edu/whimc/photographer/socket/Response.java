@@ -5,6 +5,7 @@ import java.util.UUID;
 public class Response {
 
     private UUID clientUuid;
+    private String playerName;
     private int observationId;
     private String feedback;
     private String generatedCaption;
@@ -14,8 +15,9 @@ public class Response {
         super();
     }
 
-    public Response(UUID clientUuid, int observationId, String feedback, String generatedCaption, float score) {
+    public Response(UUID clientUuid, String playerName, int observationId, String feedback, String generatedCaption, float score) {
         this.clientUuid = clientUuid;
+        this.playerName = playerName;
         this.observationId = observationId;
         this.feedback = feedback;
         this.generatedCaption = generatedCaption;
@@ -24,6 +26,10 @@ public class Response {
 
     public UUID getClientUuid() {
         return clientUuid;
+    }
+
+    public String getPlayerName() {
+        return playerName;
     }
 
     public int getObservationId() {

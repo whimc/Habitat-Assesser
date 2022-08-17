@@ -218,6 +218,7 @@ async def screenshot(obs_id, user_name, user_caption):
         "screenshot_response",
         data={
             "clientUuid": DATA.uuid,
+            "playerName": DATA.observation.user,
             "observationId": obs_id,
             "feedback": data["feedback"],
             "generatedCaption": data["generated caption"],
