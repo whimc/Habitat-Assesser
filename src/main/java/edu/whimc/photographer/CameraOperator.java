@@ -120,7 +120,7 @@ public class CameraOperator {
         String strippedObservation = ChatColor.stripColor(observation.getObservation());
 
         Bukkit.getScheduler().runTaskLaterAsynchronously(this.plugin, () ->
-                getClient().sendEvent("screenshot", observation.getId(), player.getName(), strippedObservation)
+                getClient().sendEvent("screenshot", observation.getId(), observation.getPlayer(), strippedObservation)
         , 20);
     }
 

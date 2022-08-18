@@ -2,7 +2,6 @@ package edu.whimc.photographer;
 
 import com.corundumstudio.socketio.SocketIOClient;
 import edu.whimc.observations.models.Observation;
-import edu.whimc.observations.models.ObserveEvent;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
