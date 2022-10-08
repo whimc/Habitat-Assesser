@@ -3,10 +3,10 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>edu.whimc</groupId>
     <artifactId>WHIMC-Photographer</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
+    <description>Automatically take screenshots of observations in game</description>
     <packaging>jar</packaging>
 
     <name>WHIMC Photographer</name>
@@ -15,6 +15,12 @@
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <!-- Repo for plugin -->
+    <scm>
+        <connection>scm:git:git@github.com:whimc/Photographer.git</connection>
+        <tag>HEAD</tag>
+    </scm>
 
     <build>
         <plugins>
@@ -42,6 +48,22 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- Github release settings -->
+            <plugin>
+                <groupId>de.jutzig</groupId>
+                <artifactId>github-release-plugin</artifactId>
+                <version>1.1.1</version>
+                <configuration>
+                    <description>Release for v${project.version}</description>
+                    <releaseName>${project.artifactId}-${project.version}</releaseName>
+                    <tag>${project.version}</tag>
+                    <fileSets>
+                        <fileSet>
+                            <directory>${project.build.directory}</directory>
+                        </fileSet>
+                    </fileSets>
+                </configuration>
             </plugin>
         </plugins>
         <resources>
