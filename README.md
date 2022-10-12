@@ -1,21 +1,42 @@
 # WHIMC-Photographer
 
-[![GitHub release (latest by date)](https://img.shields.io/badge/WHIMC--Photographer-Download-blue)](https://github.com/whimc/Photographer/releases/latest)
+Delegate Minecraft clients to take screenshots of observation locations. Grades the images and observation text using AI.
 
-Automatically take pictures of observations 
+Refer to the [WHIMC-Photographer Client README](/client/README.md) for client setup.
 
 ## Building
-Compile a jar from the command line by doing a "Build" via Maven:
+
+Compile a jar from the command line via Maven:
 ```
-$ mvn clean package
+$ mvn install
 ```
-It will show up in the `target/` directory.
+It should show up in the target directory. Make sure to update your version number.
 
 ## Dependencies
-* [WHIMC-Observations](https://github.com/whimc/Observations)
+- [WHIMC Observations](https://github.com/whimc/Observations)
 
 ## Commands
-TODO
 
-## Client Usage
-TODO
+| Command                           | Description                                      |
+|-----------------------------------|--------------------------------------------------|
+| `/photographer clients`           | lists currently active clients                   |
+| `/photographer disconnect-all`    | disconnects all currently connected clients      |
+| `/photographer collect <uuid>`    | become a photographer                            |
+| `/photographer stop-collecting`   | un-registers player as photographer              |
+| `/photographer disconnect`        | disconnects client with provided UUID            |
+| `/photographer send <uuid> <msg>` | sends a message to the client with provided UUID |
+
+## Config
+
+| Key    | Type     | Description        |
+|--------|----------|--------------------|
+| `host` | `string` | the websocket host |
+| `port` | `string` | the websocket port |
+
+**Example:**
+
+```yaml
+websocket:
+  host: 0.0.0.0
+  port: 8234
+```
