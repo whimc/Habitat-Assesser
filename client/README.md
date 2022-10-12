@@ -13,3 +13,8 @@ python -m venv venv
 ./venv/Scripts/activate
 pip install -r requirements.txt
 ```
+
+## Configure
+```
+python photographer.py --host <main server ip> --port 8235
+```
