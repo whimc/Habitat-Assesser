@@ -4,6 +4,8 @@ Delegate Minecraft clients to take screenshots of observation locations. Grades 
 
 Refer to the [WHIMC-Photographer Client README](/client/README.md) for client setup.
 
+[![GitHub release (latest by date)](https://img.shields.io/badge/WHIMC--Photographer-Download-blue)](https://github.com/whimc/Photographer/releases/latest)
+
 ## Building
 
 Compile a jar from the command line via Maven:
