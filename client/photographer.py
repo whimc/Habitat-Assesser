@@ -135,6 +135,7 @@ async def screenshot_window(window_id) -> Optional[Path]:
 
     if result == 1:
         file_name = datetime.datetime.now().strftime("%Y-%m-%d_%H.%M.%S")
+        SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
         path = SCREENSHOTS_DIR / f"{file_name}.png"
         im.save(path)
         return path
