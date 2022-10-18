@@ -10,6 +10,8 @@ import json
 import time
 import argparse
 import datetime
+import logging
+import sys
 
 import asyncio
 import aiohttp
@@ -38,6 +40,7 @@ class Args:
     host: str = "localhost"
     port: int = 8234
     screenshot_delay: int = 15
+    log_file = None
 
 
 @dataclass
@@ -75,9 +78,22 @@ CAMERAMAN_LOADING = Status("[bright_red]Waiting for cameraman to connect")
 OBSERVATION_WAITING = Status("[bright_green]Ready for observation")
 
 
+def my_excepthook(exc_type, exc_value, traceback):
+    if exc_type == KeyboardInterrupt:
+        log("Shutting down...")
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(disconnect())
+        exit()
+    logging.error("Logging an uncaught exception", exc_info=(exc_type, exc_value, traceback))
+
+
+sys.excepthook = my_excepthook
+
+
 def log(msg):
     prefix = f"[aqua]obs_id={DATA.observation.id}[/]: " if DATA.observation is not None else ""
     CONSOLE.log(f"{prefix}{msg}")
+    logging.info(msg)
 
 
 def get_foreground_window_title() -> Optional[str]:
@@ -160,6 +176,7 @@ async def disconnect():
 
     DATA.uuid = None
     DATA.uuid_event.clear()
+    await SIO.emit("disconnect")
     await SIO.disconnect()
     log("Client disconnected")
 
@@ -277,12 +294,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--host",
-        default="localhost",
+        required=True,
     )
     parser.add_argument(
         "--port",
         type=int,
-        default=8234,
+        required=True,
     )
     parser.add_argument(
         "--screenshot-delay",
@@ -290,8 +307,19 @@ if __name__ == "__main__":
         help="Seconds to wait between teleporting and taking a screenshot.",
         default=15,
     )
+    parser.add_argument(
+        "--log-file",
+        default=Path(__file__).parent / "photographer.log",
+        type=argparse.FileType("w"),
+    )
     args = parser.parse_args()
     ARGS.__dict__.update(vars(args))
+    logger = logging.basicConfig(
+        filename=args.log_file,
+        level=logging.DEBUG,
+        format="[%(asctime)s] - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     log("Focus your Minecraft window!")
     time.sleep(1)
@@ -310,4 +338,3 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
     loop.close()
-    ...

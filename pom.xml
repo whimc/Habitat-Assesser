@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.whimc</groupId>
     <artifactId>WHIMC-Photographer</artifactId>
-    <version>1.0</version>
+    <version>1.0.1</version>
     <description>Automatically take screenshots of observations in game</description>
     <packaging>jar</packaging>
 

@@ -3,6 +3,7 @@ package edu.whimc.photographer;
 import com.corundumstudio.socketio.SocketIOClient;
 import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
 import edu.whimc.observations.models.Observation;
+import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Optional;
@@ -22,8 +23,11 @@ public class CameraOperator {
     private final Photographer plugin;
     private final UUID playerUuid;
     private final UUID clientUuid;
+    private final SocketAddress clientAddress;
 
-    /** Previous things about the player */
+    /**
+     * Previous things about the player
+     */
     private GameMode prevGameMode;
     private Location prevLocation;
 
@@ -33,9 +37,11 @@ public class CameraOperator {
         this.plugin = plugin;
         this.playerUuid = player.getUniqueId();
         this.clientUuid = client.get("uuid");
+        clientAddress = client.getRemoteAddress();
     }
 
-    public static Optional<CameraOperator> registerCameraOperator(Photographer plugin, Player player, SocketIOClient client) {
+    public static Optional<CameraOperator> registerCameraOperator(Photographer plugin, Player player,
+                                                                  SocketIOClient client) {
         if (getCameraOperator(player.getUniqueId()).isPresent()
                 || getCameraOperator(client.get("uuid")).isPresent()) {
             return Optional.empty();
@@ -69,7 +75,9 @@ public class CameraOperator {
         Utils.msg(player, "&6&lYou are no longer a photographer");
         CameraOperator.operators.remove(this);
 
-        getClient().sendEvent("cameraman_disconnect", player.getName());
+        this.plugin.getClient(this.clientUuid).ifPresent(co ->
+                co.sendEvent("cameraman_disconnect", player.getName())
+        );
 
         Bukkit.getScheduler().runTask(this.plugin, () -> {
             // Restore the state of the player
@@ -120,8 +128,8 @@ public class CameraOperator {
         String strippedObservation = ChatColor.stripColor(observation.getObservation());
 
         Bukkit.getScheduler().runTaskLaterAsynchronously(this.plugin, () ->
-                getClient().sendEvent("screenshot", observation.getId(), observation.getPlayer(), strippedObservation)
-        , 20);
+                        getClient().sendEvent("screenshot", observation.getId(), observation.getPlayer(), strippedObservation)
+                , 20);
     }
 
     public Player getPlayer() {
@@ -138,6 +146,10 @@ public class CameraOperator {
 
     public UUID getClientUuid() {
         return this.clientUuid;
+    }
+
+    public SocketAddress getClientAddress() {
+        return this.clientAddress;
     }
 
     public @Nullable Observation getCurrentObservation() {

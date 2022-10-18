@@ -42,7 +42,7 @@ public final class Photographer extends JavaPlugin {
 
         this.socketServer.addDisconnectListener(
                 client -> CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
-                    this.getLogger().info("Disconnected from " + co.getClient().getRemoteAddress() +
+                    this.getLogger().info("Disconnected from " + co.getClientAddress() +
                             " [" + co.getClientUuid() + "]");
                     co.unregister();
                 }));
