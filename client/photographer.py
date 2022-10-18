@@ -39,7 +39,8 @@ SIO = socketio.AsyncClient()
 class Args:
     host: str = "localhost"
     port: int = 8234
-    screenshot_delay: int = 15
+    different_world_screenshot_delay: int = 15
+    same_world_screenshot_delay: int = 2
     log_file = None
 
 
@@ -207,17 +208,26 @@ async def message(msg):
 
 
 @SIO.event
-async def screenshot(obs_id, user_name, user_caption):
+async def screenshot(obs_id, user_name, user_caption, does_player_teleport):
     log(f"Received screenshot request: id={obs_id},caption='{user_caption}'")
 
     if DATA.is_event_in_progress:
         await screenshot_failed("Screenshot already in progress!", obs_id)
         return
 
+    log("Received screenshot request")
     DATA.observation = Observation(obs_id, user_name, user_caption)
-    log(f"Received screenshot request. Waiting {ARGS.screenshot_delay}s to allow teleport to load")
+
+    if does_player_teleport:
+        log("Player does not have to change worlds.")
+        screenshot_delay = ARGS.same_world_screenshot_delay
+    else:
+        log("Player needs to change worlds.")
+        screenshot_delay = ARGS.different_world_screenshot_delay
+
     # Give time for the picture to process
-    await asyncio.sleep(ARGS.screenshot_delay)
+    log(f"Waiting {screenshot_delay}s")
+    await asyncio.sleep(screenshot_delay)
 
     ss_path = await screenshot_window(DATA.mc_window_id)
 
@@ -302,9 +312,15 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument(
-        "--screenshot-delay",
+        "--same-world-screenshot-delay",
         type=int,
-        help="Seconds to wait between teleporting and taking a screenshot.",
+        help="Seconds to wait between teleporting and taking a screenshot if the player doesn't have to change worlds.",
+        default=2,
+    )
+    parser.add_argument(
+        "--different-world-screenshot-delay",
+        type=int,
+        help="Seconds to wait between teleporting and taking a screenshot if the player has to change worlds.",
         default=15,
     )
     parser.add_argument(

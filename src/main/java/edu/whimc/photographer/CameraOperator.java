@@ -123,13 +123,14 @@ public class CameraOperator {
         if (observation.getHologram() != null) {
             observation.getHologram().getVisibilityManager().hideTo(player);
         }
+        boolean changedWorlds = player.getWorld().equals(observation.getViewLocation().getWorld());
         player.teleport(observation.getViewLocation());
 
         String strippedObservation = ChatColor.stripColor(observation.getObservation());
 
-        Bukkit.getScheduler().runTaskLaterAsynchronously(this.plugin, () ->
-                        getClient().sendEvent("screenshot", observation.getId(), observation.getPlayer(), strippedObservation)
-                , 20);
+        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () ->
+                        getClient().sendEvent("screenshot", observation.getId(), observation.getPlayer(), strippedObservation, changedWorlds)
+                );
     }
 
     public Player getPlayer() {
