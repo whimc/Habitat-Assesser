@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 public class Listeners implements Listener {
@@ -31,5 +32,10 @@ public class Listeners implements Listener {
         Player player = event.getPlayer();
         CameraOperator.getCameraOperator(player.getUniqueId()).ifPresent(CameraOperator::unregister);
         CameraOperator.getAllCameraOperators().forEach(co -> co.getPlayer().showPlayer(this.plugin, player));
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        CameraOperator.getAllCameraOperators().forEach(co -> co.getPlayer().hidePlayer(this.plugin, event.getPlayer()));
     }
 }
