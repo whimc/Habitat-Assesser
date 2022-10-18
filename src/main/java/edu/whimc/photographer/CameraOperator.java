@@ -79,18 +79,16 @@ public class CameraOperator {
                 co.sendEvent("cameraman_disconnect", player.getName())
         );
 
-        Bukkit.getScheduler().runTask(this.plugin, () -> {
-            // Restore the state of the player
-            player.teleport(this.prevLocation);
-            player.setGameMode(this.prevGameMode);
+        // Restore the state of the player
+        player.teleport(this.prevLocation);
+        player.setGameMode(this.prevGameMode);
 
-            // Show all players
-            Bukkit.getOnlinePlayers().forEach(p -> player.showPlayer(this.plugin, p));
+        // Show all players
+        Bukkit.getOnlinePlayers().forEach(p -> player.showPlayer(this.plugin, p));
 
-            // Show all holograms
-            HologramsAPI.getHolograms(plugin.getObservationsPlugin()).forEach(hologram ->
-                    hologram.getVisibilityManager().resetVisibility(player));
-        });
+        // Show all holograms
+        HologramsAPI.getHolograms(plugin.getObservationsPlugin()).forEach(hologram ->
+                hologram.getVisibilityManager().resetVisibility(player));
     }
 
     public static Optional<CameraOperator> getAvailableOperator() {

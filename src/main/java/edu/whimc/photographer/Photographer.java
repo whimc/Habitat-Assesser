@@ -44,7 +44,7 @@ public final class Photographer extends JavaPlugin {
                 client -> CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
                     this.getLogger().info("Disconnected from " + co.getClientAddress() +
                             " [" + co.getClientUuid() + "]");
-                    co.unregister();
+                    Bukkit.getScheduler().runTask(this, () -> co.unregister());
                 }));
 
         socketServer.addEventListener("test", String.class, (client, message, ackRequest) ->
