@@ -16,5 +16,5 @@ pip install -r requirements.txt
 
 ## Configure
 ```
-python photographer.py --host <main server ip> --port 8235
+python photographer.py --host <minecraft server ip> --port <port from plugin config> --api-version <1 | 2>
 ```
