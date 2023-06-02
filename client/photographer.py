@@ -31,7 +31,6 @@ from rich.console import Console
 from rich.status import Status
 
 SCREENSHOTS_DIR = Path("~/AppData/Roaming/.minecraft/screenshots").expanduser().resolve()
-API_URL = "http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/caption-image"
 SIO = socketio.AsyncClient()
 
 
@@ -39,6 +38,8 @@ SIO = socketio.AsyncClient()
 class Args:
     host: str = "localhost"
     port: int = 8234
+    api_url: str = None
+    api_version: str = None
     different_world_screenshot_delay: int = 15
     same_world_screenshot_delay: int = 2
     log_file = None
@@ -112,9 +113,10 @@ async def call_api(screenshot_path: Path, observation: Observation) -> dict:
         "user-caption": observation.caption,
         "user": observation.user,
         "image": open(screenshot_path, "rb"),
+        "version": ARGS.api_version,
     }
     async with aiohttp.ClientSession() as session:
-        async with session.post(API_URL, data=data) as resp:
+        async with session.post(ARGS.api_url, data=data) as resp:
             raw_data = await resp.content.read()
     return json.loads(raw_data)
 
@@ -310,6 +312,15 @@ if __name__ == "__main__":
         "--port",
         type=int,
         required=True,
+    )
+    parser.add_argument(
+        "--api-url",
+        default="http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/caption-image",
+    )
+    parser.add_argument(
+        "--api-version",
+        required=True,
+        choices=["1", "2"],
     )
     parser.add_argument(
         "--same-world-screenshot-delay",
