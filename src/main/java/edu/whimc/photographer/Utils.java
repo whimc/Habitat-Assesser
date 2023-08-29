@@ -15,4 +15,16 @@ public final class Utils {
         return ChatColor.translateAlternateColorCodes('&', str);
     }
 
+    public static int parseInt(String input, int defaultValue) {
+        Integer parsed = parseInt(input);
+        return parsed == null ? defaultValue : parsed;
+    }
+
+    public static Integer parseInt(String str) {
+        try {
+            return Integer.parseInt(str);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
 }

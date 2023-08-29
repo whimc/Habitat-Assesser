@@ -51,7 +51,7 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (subCmd.equalsIgnoreCase("queue")) {
+        if (subCmd.equalsIgnoreCase("queue-list")) {
             Utils.msg(sender, "&b&lQueued observations:");
             for (Observation observation : this.plugin.getObservationQueue()) {
                 Utils.msg(sender, observation.toString());
@@ -80,6 +80,34 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
                 Utils.msg(sender, "&cNo observation with id " + obs_id + " found in queue");
             }
 
+            return true;
+        }
+
+        if (subCmd.equalsIgnoreCase("queue-add")) {
+            if (args.length < 2) {
+                Utils.msg(sender, "&o/photographer queue-add <start id> [end id]");
+                return true;
+            }
+
+            // Parse start/end observation IDs
+            Integer startId = Utils.parseInt(args[1]);
+            Integer endId = args.length >= 3 ? Utils.parseInt(args[2]) : startId;
+            if (startId == null || endId == null) {
+                Utils.msg(sender, "&cCould not parse arguments are integers!");
+                return true;
+            }
+
+            // Queue up observations to be photographed
+            List<Observation> observations = Observation.getObservations().stream()
+                    .filter(obs -> obs.getId() >= startId && obs.getId() <= endId)
+                    .collect(Collectors.toList());
+            for (Observation obs : observations) {
+                if (sender instanceof Player) {
+                    obs.getHologram().getVisibilityManager().hideTo((Player) sender);
+                }
+                this.plugin.queueObservationPhotograph(obs);
+            }
+            Utils.msg(sender, "&aQueueing &2" + observations.size() + " &aobservation(s) to be photographed!");
             return true;
         }
 
@@ -169,9 +197,10 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
     private void sendUsage(CommandSender sender) {
         Utils.msg(sender,
                 "&e/photographer &6clients",
-                "&e/photographer &6queue",
+                "&e/photographer &6queue-list",
                 "&e/photographer &6queue-clear",
-                "&e/photographer &6queue-remove <id>",
+                "&e/photographer &6queue-remove &7<id>",
+                "&e/photographer &6queue-add &7<start id> [end id]",
                 "&e/photographer &6disconnect-all",
                 "&e/photographer &6collect &7<uuid>",
                 "&e/photographer &6stop-collecting",
@@ -185,15 +214,24 @@ public class PhotographerCommand implements CommandExecutor, TabCompleter {
         if (args.length <= 1) {
             return Stream.of(
                             "clients",
-                            "queue",
+                            "queue-list",
                             "queue-clear",
                             "queue-remove",
+                            "queue-add",
                             "disconnect-all",
                             "collect",
                             "stop-collecting",
                             "disconnect",
                             "send"
                     ).filter(arg -> arg.startsWith(args[0].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+        if (args[0].equalsIgnoreCase("queue-add")) {
+            int minObs = args.length > 2 ? Utils.parseInt(args[1], 0) : 0;
+            return Observation.getObservations().stream()
+                    .filter(obs -> obs.getId() > minObs)
+                    .map(obs -> Integer.toString(obs.getId()))
+                    .sorted()
                     .collect(Collectors.toList());
         }
         return this.plugin.getSocketServer().getAllClients().stream()
