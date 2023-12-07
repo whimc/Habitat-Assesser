@@ -3,8 +3,7 @@ version: '${project.version}'
 author: Jack Henhapl
 main: edu.whimc.photographer.Photographer
 api-version: 1.18
-depend:
-  - WHIMC-Observations
+depend: [WHIMC-Observations, WHIMC-OverworldAgent]
 commands:
   photographer:
     permission: whimc-photographer.admin

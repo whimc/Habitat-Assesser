@@ -1,6 +1,8 @@
 package edu.whimc.photographer;
 
+import com.corundumstudio.socketio.SocketIOClient;
 import edu.whimc.observations.models.ObserveEvent;
+import edu.whimc.overworld_agent.dialoguetemplate.events.BuildAssessEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -8,12 +10,17 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.Optional;
+import java.util.UUID;
+
 public class Listeners implements Listener {
 
     private final Photographer plugin;
+    private final UUID uuid;
 
-    public Listeners(Photographer plugin) {
+    public Listeners(Photographer plugin, UUID uuid) {
         this.plugin = plugin;
+        this.uuid = uuid;
     }
 
     @EventHandler
@@ -25,6 +32,14 @@ public class Listeners implements Listener {
            CameraOperator.getAllCameraOperators().forEach(co ->
                    event.getObservation().getHologram().getVisibilityManager().hideTo(co.getPlayer()));
         }, 10);
+    }
+
+    @EventHandler
+    public void onBuildAssessment(BuildAssessEvent assessment){
+        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
+            Optional<SocketIOClient> client = plugin.getClientHabitats(uuid);
+            client.get().sendEvent("assess", assessment.getId(), assessment.getUser(), assessment.getWorld(), assessment.getTeammates());
+        });
     }
 
     @EventHandler

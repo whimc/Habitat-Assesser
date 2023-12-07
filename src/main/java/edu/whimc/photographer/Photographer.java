@@ -5,6 +5,8 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import edu.whimc.observations.Observations;
 import edu.whimc.observations.models.Observation;
+import edu.whimc.overworld_agent.OverworldAgent;
+import edu.whimc.photographer.socket.AssessmentResponse;
 import edu.whimc.photographer.socket.Response;
 import java.util.LinkedList;
 import java.util.Optional;
@@ -20,21 +22,36 @@ public final class Photographer extends JavaPlugin {
     private final Queue<Observation> observationQueue = new LinkedList<>();
 
     private SocketIOServer socketServer;
+    private SocketIOServer socketServerHabitats;
     private Observations observationsPlugin;
+    private OverworldAgent agentPlugin;
 
     @Override
     public void onEnable() {
         super.saveDefaultConfig();
 
         this.observationsPlugin = (Observations) getServer().getPluginManager().getPlugin("WHIMC-Observations");
+        this.agentPlugin = (OverworldAgent) getServer().getPluginManager().getPlugin("WHIMC-OverworldAgent");
 
-        Configuration config = new Configuration();
-        config.setHostname(super.getConfig().getString("websocket.host"));
-        config.setPort(super.getConfig().getInt("websocket.port"));
+        Configuration config= new Configuration();
+        config.setHostname(super.getConfig().getString("websocket.observation_assessment.host"));
+        config.setPort(super.getConfig().getInt("websocket.observation_assessment.port"));
+
+        Configuration configHabitats = new Configuration();
+        configHabitats.setHostname(super.getConfig().getString("websocket.habitat_assessment.host"));
+        configHabitats.setPort(super.getConfig().getInt("websocket.habitat_assessment.port"));
 
         this.socketServer = new SocketIOServer(config);
         this.socketServer.addConnectListener(client -> {
             UUID uuid = UUID.randomUUID();
+            client.set("uuid", uuid);
+            client.sendEvent("uuid", uuid);
+            this.getLogger().info("connected to " + client.getRemoteAddress() + " [" + uuid + "]");
+        });
+
+        this.socketServerHabitats = new SocketIOServer(configHabitats);
+        UUID uuid = UUID.randomUUID();
+        this.socketServerHabitats.addConnectListener(client -> {
             client.set("uuid", uuid);
             client.sendEvent("uuid", uuid);
             this.getLogger().info("connected to " + client.getRemoteAddress() + " [" + uuid + "]");
@@ -92,6 +109,28 @@ public final class Photographer extends JavaPlugin {
 
         this.socketServer.start();
 
+        socketServerHabitats.addEventListener("assessment_response", AssessmentResponse.class, (client, response, ackRequest) -> {
+
+            this.getLogger().info("Interaction ID: " + response.getId());
+            this.getLogger().info("User: " + response.getUser());
+            this.getLogger().info("Feedback: " + response.getFeedback());
+
+            Player player = Bukkit.getPlayer(response.getUser());
+            if (player == null) {
+                return;
+            }
+
+            Utils.msg(player, "&m                                                                                 ");
+            Utils.msg(player, "&b&lYour habitat has been analyzed!");
+            Utils.msg(player, "");
+            Utils.msg(player, "&e&lFEEDBACK:");
+            Utils.msg(player, "    &6" + response.getFeedback());
+            Utils.msg(player, "");
+            Utils.msg(player, "&m                                                                                 ");
+        });
+
+        socketServerHabitats.start();
+
         // Queue up some events
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             if (this.observationQueue.isEmpty()) {
@@ -100,7 +139,7 @@ public final class Photographer extends JavaPlugin {
             CameraOperator.getAvailableOperator().ifPresent(co -> co.photograph(this.observationQueue.poll()));
         }, 20, 20);
 
-        getServer().getPluginManager().registerEvents(new Listeners(this), this);
+        getServer().getPluginManager().registerEvents(new Listeners(this, uuid), this);
 
         PluginCommand cmd = getCommand("photographer");
         PhotographerCommand photographerCommand = new PhotographerCommand(this);
@@ -129,9 +168,15 @@ public final class Photographer extends JavaPlugin {
     public Observations getObservationsPlugin() {
         return this.observationsPlugin;
     }
+    public OverworldAgent getAgentPlugin(){return this.agentPlugin;}
 
     public Optional<SocketIOClient> getClient(UUID clientUuid) {
         return this.socketServer.getAllClients().stream()
+                .filter(c -> c.get("uuid").equals(clientUuid))
+                .findFirst();
+    }
+    public Optional<SocketIOClient> getClientHabitats(UUID clientUuid) {
+        return this.socketServerHabitats.getAllClients().stream()
                 .filter(c -> c.get("uuid").equals(clientUuid))
                 .findFirst();
     }
