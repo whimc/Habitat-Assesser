@@ -5,3 +5,21 @@ websocket:
   habitat_assessment:
     host: 0.0.0.0
     port: 8235
+mysql:
+  host: localhost
+  port: 3306
+  database: minecraft
+  username: user
+  password: pass
+habitat_feedback:
+  area: "providing shelter in a valley or underground to protect your base"
+  communications_facilities: "providing antennas or communication rooms"
+  food: "providing an indoor farm or water/ice storage"
+  gravity: "providing a gym or other facilities to combat the different level of gravity"
+  health: "providing an infirmary or a psychiatrist’s office"
+  oxygen_regulation: "providing oxygen regulation or airlocks"
+  power_generation: "providing nuclear power"
+  radiation_protection: "providing multiple layers of radiation protection"
+  supplies: "providing easily accessible and protected supply storage"
+  shape: "providing rounded walls to prevent particles from coming in the corners"
+  transportation: "providing a rover or launchpad for transportation"

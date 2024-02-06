@@ -6,6 +6,7 @@ import com.corundumstudio.socketio.SocketIOServer;
 import edu.whimc.observations.Observations;
 import edu.whimc.observations.models.Observation;
 import edu.whimc.overworld_agent.OverworldAgent;
+import edu.whimc.photographer.utils.sql.Queryer;
 import edu.whimc.photographer.socket.AssessmentResponse;
 import edu.whimc.photographer.socket.Response;
 import java.util.LinkedList;
@@ -25,10 +26,20 @@ public final class Photographer extends JavaPlugin {
     private SocketIOServer socketServerHabitats;
     private Observations observationsPlugin;
     private OverworldAgent agentPlugin;
+    private Queryer queryer;
 
     @Override
     public void onEnable() {
         super.saveDefaultConfig();
+
+        this.queryer = new Queryer(this, q -> {
+            // If we couldn't connect to the database disable the plugin
+            if (q == null) {
+                this.getLogger().severe("Could not establish MySQL connection! Disabling plugin...");
+                return;
+            }
+
+        });
 
         this.observationsPlugin = (Observations) getServer().getPluginManager().getPlugin("WHIMC-Observations");
         this.agentPlugin = (OverworldAgent) getServer().getPluginManager().getPlugin("WHIMC-OverworldAgent");
@@ -110,23 +121,25 @@ public final class Photographer extends JavaPlugin {
         this.socketServer.start();
 
         socketServerHabitats.addEventListener("assessment_response", AssessmentResponse.class, (client, response, ackRequest) -> {
+            queryer.storeNewBuildAssessment(response, id -> {
+                String feedback = "Nice work on " + super.getConfig().getString("habitat_feedback." + response.getHighestCategory()) + ", have you thought about working on " + super.getConfig().getString("habitat_feedback." + response.getLowestCategory()) + "?";
+                this.getLogger().info("Interaction ID: " + response.getId());
+                this.getLogger().info("User: " + response.getUser());
+                this.getLogger().info("Feedback: " + feedback);
 
-            this.getLogger().info("Interaction ID: " + response.getId());
-            this.getLogger().info("User: " + response.getUser());
-            this.getLogger().info("Feedback: " + response.getFeedback());
+                Player player = Bukkit.getPlayer(response.getUser());
+                if (player == null) {
+                    return;
+                }
 
-            Player player = Bukkit.getPlayer(response.getUser());
-            if (player == null) {
-                return;
-            }
-
-            Utils.msg(player, "&m                                                                                 ");
-            Utils.msg(player, "&b&lYour habitat has been analyzed!");
-            Utils.msg(player, "");
-            Utils.msg(player, "&e&lFEEDBACK:");
-            Utils.msg(player, "    &6" + response.getFeedback());
-            Utils.msg(player, "");
-            Utils.msg(player, "&m                                                                                 ");
+                Utils.msg(player, "&m                                                                                 ");
+                Utils.msg(player, "&b&lYour habitat has been analyzed!");
+                Utils.msg(player, "");
+                Utils.msg(player, "&e&lFEEDBACK:");
+                Utils.msg(player, "    &6" + feedback);
+                Utils.msg(player, "");
+                Utils.msg(player, "&m                                                                                 ");
+            });
         });
 
         socketServerHabitats.start();

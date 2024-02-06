@@ -15,8 +15,8 @@ from rich.status import Status
 @dataclass
 class Args:
     host: str = "localhost"
-    port: int = 8234
-    api_url: str = None
+    port: int = 8235
+    api_url: str = "Need to change"
     log_file = None
 
 @dataclass
@@ -90,7 +90,7 @@ async def call_api_habitat(assessment: Habitat_Assessment) -> dict:
         "teammates": assessment.teammates,
     }
     async with aiohttp.ClientSession() as session:
-        async with session.post("http://192.168.1.150:8080/assess-habitat", data=data) as resp:
+        async with session.post(f"http://{ARGS.api_url}/assess-habitat", data=data) as resp:
             raw_data = await resp.content.read()
     return json.loads(raw_data)
 
@@ -103,13 +103,24 @@ async def assess(assess_id, user_name, user_world, user_teammates):
     log("Calling API")
     data = await call_api_habitat(DATA.assessment)
     log(f"Response from API: {data}")
-
     await SIO.emit(
         "assessment_response",
         data={
             "id": data["id"],
             "user": data["user"],
-            "feedback": data["feedback"],
+            "lowestCategory": data["lowestcategory"],
+            "highestCategory": data["highestcategory"],
+            "area": data["area"],
+            "communicationsFacilities": data["communicationsfacilities"],
+            "food": data["food"],
+            "gravity": data["gravity"],
+            "health": data["health"],
+            "oxygenRegulation": data["oxygenregulation"],
+            "powerGeneration": data["powergeneration"],
+            "radiationProtection": data["radiationprotection"],
+            "supplies": data["supplies"],
+            "shape": data["shape"],
+            "transportation": data["transportation"]
         },
     )
     log("[green]Response sent to server")
@@ -154,7 +165,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--api-url",
-        default="http://192.168.1.150:8080/assess-habitat",
+        default="http://{ARGS.api_url}/assess-habitat",
     )
     parser.add_argument(
         "--log-file",
