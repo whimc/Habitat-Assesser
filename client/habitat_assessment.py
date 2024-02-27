@@ -16,7 +16,7 @@ from rich.status import Status
 class Args:
     host: str = "localhost"
     port: int = 8235
-    api_url: str = "Need to change"
+    api_url: str = "http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/assess-habitat"
     log_file = None
 
 @dataclass
@@ -90,7 +90,7 @@ async def call_api_habitat(assessment: Habitat_Assessment) -> dict:
         "teammates": assessment.teammates,
     }
     async with aiohttp.ClientSession() as session:
-        async with session.post(f"http://{ARGS.api_url}/assess-habitat", data=data) as resp:
+        async with session.post(ARGS.api_url, data=data) as resp:
             raw_data = await resp.content.read()
     return json.loads(raw_data)
 
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--api-url",
-        default="http://{ARGS.api_url}/assess-habitat",
+        default="http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/assess-habitat",
     )
     parser.add_argument(
         "--log-file",
