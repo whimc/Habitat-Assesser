@@ -21,7 +21,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class Photographer extends JavaPlugin {
 
     private final Queue<Observation> observationQueue = new LinkedList<>();
-
     private SocketIOServer socketServer;
     private SocketIOServer socketServerHabitats;
     private Observations observationsPlugin;
@@ -44,14 +43,51 @@ public final class Photographer extends JavaPlugin {
         this.observationsPlugin = (Observations) getServer().getPluginManager().getPlugin("WHIMC-Observations");
         this.agentPlugin = (OverworldAgent) getServer().getPluginManager().getPlugin("WHIMC-OverworldAgent");
 
+        //Set up habitat socket server
+        Thread habitatThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    habitatServer();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        habitatThread.start();
+
+        //Set up Photographer socket server
+        Thread photographerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    photographerServer();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        photographerThread.start();
+
+        // Queue up some events
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
+            if (this.observationQueue.isEmpty()) {
+                return;
+            }
+            CameraOperator.getAvailableOperator().ifPresent(co -> co.photograph(this.observationQueue.poll()));
+        }, 20, 20);
+
+        getServer().getPluginManager().registerEvents(new Listeners(this), this);
+
+        PluginCommand cmd = getCommand("photographer");
+        PhotographerCommand photographerCommand = new PhotographerCommand(this);
+        cmd.setExecutor(photographerCommand);
+        cmd.setTabCompleter(photographerCommand);
+    }
+    public void photographerServer() {
         Configuration config= new Configuration();
         config.setHostname(super.getConfig().getString("websocket.observation_assessment.host"));
         config.setPort(super.getConfig().getInt("websocket.observation_assessment.port"));
-
-        Configuration configHabitats = new Configuration();
-        configHabitats.setHostname(super.getConfig().getString("websocket.habitat_assessment.host"));
-        configHabitats.setPort(super.getConfig().getInt("websocket.habitat_assessment.port"));
-
         this.socketServer = new SocketIOServer(config);
         this.socketServer.addConnectListener(client -> {
             UUID uuid = UUID.randomUUID();
@@ -59,15 +95,6 @@ public final class Photographer extends JavaPlugin {
             client.sendEvent("uuid", uuid);
             this.getLogger().info("connected to " + client.getRemoteAddress() + " [" + uuid + "]");
         });
-
-        this.socketServerHabitats = new SocketIOServer(configHabitats);
-        UUID uuid = UUID.randomUUID();
-        this.socketServerHabitats.addConnectListener(client -> {
-            client.set("uuid", uuid);
-            client.sendEvent("uuid", uuid);
-            this.getLogger().info("connected to " + client.getRemoteAddress() + " [" + uuid + "]");
-        });
-
         this.socketServer.addDisconnectListener(
                 client -> CameraOperator.getCameraOperator(client.get("uuid")).ifPresent(co -> {
                     this.getLogger().info("Disconnected from " + co.getClientAddress() +
@@ -117,8 +144,20 @@ public final class Photographer extends JavaPlugin {
                         " could not be screenshotted. Re-adding to queue");
             });
         });
-
         this.socketServer.start();
+    }
+
+    public void habitatServer(){
+        Configuration configHabitats = new Configuration();
+        configHabitats.setHostname(super.getConfig().getString("websocket.habitat_assessment.host"));
+        configHabitats.setPort(super.getConfig().getInt("websocket.habitat_assessment.port"));
+        this.socketServerHabitats = new SocketIOServer(configHabitats);
+        UUID uuid = UUID.randomUUID();
+        this.socketServerHabitats.addConnectListener(client -> {
+            client.set("uuid", uuid);
+            client.sendEvent("uuid", uuid);
+            this.getLogger().info("connected to " + client.getRemoteAddress() + " [" + uuid + "]");
+        });
 
         socketServerHabitats.addEventListener("assessment_response", AssessmentResponse.class, (client, response, ackRequest) -> {
             queryer.storeNewBuildAssessment(response, id -> {
@@ -143,23 +182,7 @@ public final class Photographer extends JavaPlugin {
         });
 
         socketServerHabitats.start();
-
-        // Queue up some events
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
-            if (this.observationQueue.isEmpty()) {
-                return;
-            }
-            CameraOperator.getAvailableOperator().ifPresent(co -> co.photograph(this.observationQueue.poll()));
-        }, 20, 20);
-
-        getServer().getPluginManager().registerEvents(new Listeners(this, uuid), this);
-
-        PluginCommand cmd = getCommand("photographer");
-        PhotographerCommand photographerCommand = new PhotographerCommand(this);
-        cmd.setExecutor(photographerCommand);
-        cmd.setTabCompleter(photographerCommand);
     }
-
     @Override
     public void onDisable() {
         CameraOperator.getAllCameraOperators().forEach(CameraOperator::unregister);
@@ -176,6 +199,10 @@ public final class Photographer extends JavaPlugin {
 
     public SocketIOServer getSocketServer() {
         return this.socketServer;
+    }
+
+    public SocketIOServer getHabitatSocketServer() {
+        return this.socketServerHabitats;
     }
 
     public Observations getObservationsPlugin() {

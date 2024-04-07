@@ -16,11 +16,9 @@ import java.util.UUID;
 public class Listeners implements Listener {
 
     private final Photographer plugin;
-    private final UUID uuid;
 
-    public Listeners(Photographer plugin, UUID uuid) {
+    public Listeners(Photographer plugin) {
         this.plugin = plugin;
-        this.uuid = uuid;
     }
 
     @EventHandler
@@ -37,8 +35,10 @@ public class Listeners implements Listener {
     @EventHandler
     public void onBuildAssessment(BuildAssessEvent assessment){
         Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
-            Optional<SocketIOClient> client = plugin.getClientHabitats(uuid);
-            client.get().sendEvent("assess", assessment.getId(), assessment.getUser(), assessment.getWorld(), assessment.getTeammates());
+            for (SocketIOClient client : this.plugin.getHabitatSocketServer().getAllClients()) {
+                client.sendEvent("assess", assessment.getId(), assessment.getUser(), assessment.getWorld(), assessment.getTeammates());
+                break;
+            }
         });
     }
 
