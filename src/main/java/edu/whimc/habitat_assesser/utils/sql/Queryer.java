@@ -1,8 +1,7 @@
-package edu.whimc.photographer.utils.sql;
+package edu.whimc.habitat_assesser.utils.sql;
 
-
-import edu.whimc.photographer.Photographer;
-import edu.whimc.photographer.socket.AssessmentResponse;
+import edu.whimc.habitat_assesser.HabitatAssesser;
+import edu.whimc.habitat_assesser.socket.AssessmentResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -25,10 +24,10 @@ public class Queryer {
                     "(uuid, username, world, x, y, z, time, feedback_high, feedback_low, area, communications_facilities," +
                     "food, gravity, health, oxygen_regulation, power_generation, radiation_protection, supplies, shape, transportation) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    private final Photographer plugin;
+    private final HabitatAssesser plugin;
     private final MySQLConnection sqlConnection;
 
-    public Queryer(Photographer plugin, Consumer<Queryer> callback) {
+    public Queryer(HabitatAssesser plugin, Consumer<Queryer> callback) {
         this.plugin = plugin;
         this.sqlConnection = new MySQLConnection(plugin);
 

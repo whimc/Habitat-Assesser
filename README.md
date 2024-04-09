@@ -1,10 +1,9 @@
-# WHIMC-Photographer
+# WHIMC-Habitat-Assesser
 
-Delegate Minecraft clients to take screenshots of observation locations. Grades the images and observation text using AI.
+Creates a socket server to send assessment requests to the API. Grades the student team's habitat using AI.
 
-Refer to the [WHIMC-Photographer Client README](/client/README.md) for client setup.
+Refer to the [WHIMC-Habitat-Assesser Client README](/client/README.md) for client setup.
 
-[![GitHub release (latest by date)](https://img.shields.io/badge/WHIMC--Photographer-Download-blue)](https://github.com/whimc/Photographer/releases/latest)
 
 ## Building
 
@@ -15,30 +14,53 @@ $ mvn install
 It should show up in the target directory. Make sure to update your version number.
 
 ## Dependencies
-- [WHIMC Observations](https://github.com/whimc/Observations)
+- WHIMC Overworld Agent
 
 ## Commands
 
-| Command                           | Description                                      |
-|-----------------------------------|--------------------------------------------------|
-| `/photographer clients`           | lists currently active clients                   |
-| `/photographer disconnect-all`    | disconnects all currently connected clients      |
-| `/photographer collect <uuid>`    | become a photographer                            |
-| `/photographer stop-collecting`   | un-registers player as photographer              |
-| `/photographer disconnect`        | disconnects client with provided UUID            |
-| `/photographer send <uuid> <msg>` | sends a message to the client with provided UUID |
+| Command                       | Description                               |
+|-------------------------------|-------------------------------------------|
+| `/habitats clients`           | lists currently active clients            |
+| `/habitats disconnect`        | disconnects client with provided UUID     |
+| `/habitats queue-list`        | lists assessment ids in the queue         |
+| `/habitats queue-clear`       | clears the assessment queue               |
+| `/habitats queue-remove <id>` | removes assessment with id from the queue |
+
 
 ## Config
-
+### habitat_assessment
 | Key    | Type     | Description        |
 |--------|----------|--------------------|
 | `host` | `string` | the websocket host |
 | `port` | `string` | the websocket port |
 
+### mysql
+| Key        | Type     | Description         |
+|------------|----------|---------------------|
+| `host`     | `string` | the db sql host     |
+| `port`     | `string` | the db sql port     |
+| `database` | `string` | the db sql db name  |
+| `username` | `string` | the db sql username |
+| `password` | `string` | the db sql password |
+
+### habitat_feedback
+| Key                  | Type     | Description                                          |
+|----------------------|----------|------------------------------------------------------|
+| `<habitat category>` | `string` | feedback to give for the habitat assessment category |
+
 **Example:**
 
 ```yaml
 websocket:
-  host: 0.0.0.0
-  port: 8234
+  habitat_assessment:
+    host: 0.0.0.0
+    port: 8235
+mysql:
+  host: localhost
+  port: 3306
+  database: minecraft
+  username: user
+  password: pass
+habitat_feedback:
+  area: "providing shelter in a valley or underground to protect your base"
 ```

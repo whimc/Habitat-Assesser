@@ -1,9 +1,9 @@
-# WHIMC-Photographer Client
+# WHIMC-Habitat-Assesser Client
 
 **This can currently only be ran on Windows machines!**
 
-The client will run `photographer.py`. This script is responsible for taking screenshots whenever the server requests.
-It connects to the server running `WHIMC-Photographer` via a WebSocket to communicate.
+The client will run `habitat_assessment.py`. This script is responsible for sending information to the API whenever the server requests.
+It connects to the server running `WHIMC-Habitat-Assesser` via a WebSocket to communicate.
 The server will req
 
 ## Setup
@@ -16,5 +16,5 @@ pip install -r requirements.txt
 
 ## Configure
 ```
-python photographer.py --host <minecraft server ip> --port <port from plugin config> --api-version <1 | 2>
+python habitat_assessment.py 
 ```

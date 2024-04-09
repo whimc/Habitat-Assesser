@@ -1,8 +1,7 @@
-package edu.whimc.photographer.utils.sql.migration;
+package edu.whimc.habitat_assesser.utils.sql.migration;
 
-import edu.whimc.photographer.Photographer;
-import edu.whimc.photographer.utils.sql.migration.schemas.Schema_1;
-
+import edu.whimc.habitat_assesser.utils.sql.migration.schemas.Schema_1;
+import edu.whimc.habitat_assesser.HabitatAssesser;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,10 +13,10 @@ public class SchemaManager {
 
     private static final SchemaVersion BASE_SCHEMA = new Schema_1();
 
-    private final Photographer plugin;
+    private final HabitatAssesser plugin;
     private final Connection connection;
 
-    public SchemaManager(Photographer plugin, Connection connection) {
+    public SchemaManager(HabitatAssesser plugin, Connection connection) {
         this.plugin = plugin;
         this.connection = connection;
     }

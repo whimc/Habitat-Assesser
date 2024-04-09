@@ -1,4 +1,4 @@
-package edu.whimc.photographer.socket;
+package edu.whimc.habitat_assesser.socket;
 
 public class AssessmentResponse {
 

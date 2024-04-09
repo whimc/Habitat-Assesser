@@ -1,4 +1,4 @@
-package edu.whimc.photographer;
+package edu.whimc.habitat_assesser;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;

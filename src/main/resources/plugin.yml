@@ -1,10 +1,10 @@
-name: WHIMC-Photographer
+name: WHIMC-Habitat-Assesser
 version: '${project.version}'
 author: Jack Henhapl
-main: edu.whimc.photographer.Photographer
+main: edu.whimc.habitat_assesser.HabitatAssesser
 api-version: 1.18
-depend: [WHIMC-Observations, WHIMC-OverworldAgent]
+depend: [WHIMC-OverworldAgent]
 commands:
-  photographer:
-    permission: whimc-photographer.admin
-    description: "Base command of WHIMC-Photographer"
+  habitats:
+    permission: whimc-habitat-assessment.admin
+    description: "Base command of WHIMC-Habitat-Assesser"

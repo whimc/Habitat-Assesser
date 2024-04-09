@@ -1,5 +1,5 @@
-package edu.whimc.photographer.utils.sql.migration.schemas;
-import edu.whimc.photographer.utils.sql.migration.SchemaVersion;
+package edu.whimc.habitat_assesser.utils.sql.migration.schemas;
+import edu.whimc.habitat_assesser.utils.sql.migration.SchemaVersion;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

@@ -1,4 +1,4 @@
-package edu.whimc.photographer.utils.sql.migration;
+package edu.whimc.habitat_assesser.utils.sql.migration;
 
 import com.google.common.io.Files;
 

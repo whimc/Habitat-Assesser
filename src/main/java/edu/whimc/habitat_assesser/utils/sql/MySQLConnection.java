@@ -1,8 +1,7 @@
-package edu.whimc.photographer.utils.sql;
+package edu.whimc.habitat_assesser.utils.sql;
 
-import edu.whimc.photographer.utils.sql.migration.SchemaManager;
-import edu.whimc.photographer.Photographer;
-
+import edu.whimc.habitat_assesser.utils.sql.migration.SchemaManager;
+import edu.whimc.habitat_assesser.HabitatAssesser;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -19,9 +18,9 @@ public class MySQLConnection {
     private final String url;
     private final int port;
 
-    private final Photographer plugin;
+    private final HabitatAssesser plugin;
 
-    public MySQLConnection(Photographer plugin) {
+    public MySQLConnection(HabitatAssesser plugin) {
         this.host = plugin.getConfig().getString("mysql.host");
         this.port = plugin.getConfig().getInt("mysql.port");
         this.database = plugin.getConfig().getString("mysql.database");

@@ -1,7 +1,4 @@
 websocket:
-  observation_assessment:
-    host: 0.0.0.0
-    port: 8234
   habitat_assessment:
     host: 0.0.0.0
     port: 8235
