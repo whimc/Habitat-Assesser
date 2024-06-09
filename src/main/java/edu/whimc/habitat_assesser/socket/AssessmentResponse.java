@@ -1,5 +1,8 @@
 package edu.whimc.habitat_assesser.socket;
 
+import java.util.*;
+import java.util.Map.Entry;
+
 public class AssessmentResponse {
 
     private String user;
@@ -17,6 +20,7 @@ public class AssessmentResponse {
     private int supplies;
     private int shape;
     private int transportation;
+    private double priorityMultiplier = 1.5;
     public AssessmentResponse () {
         super();
     }
@@ -84,6 +88,39 @@ public class AssessmentResponse {
     }
     public int getTransportation() {
         return transportation;
+    }
+    public Map<String, Double> getPriorityAdjScores(){
+        //Calculate adjusted priority scores
+        double oxygenRegulationAdj = oxygenRegulation * priorityMultiplier;
+        double radiationProtectionAdj = radiationProtection * priorityMultiplier;
+        double foodAdj = food * priorityMultiplier;
+        double supplyAdj = supplies * priorityMultiplier;
+        double powerAdj = powerGeneration * priorityMultiplier;
+        double communicationsAdj = communicationsFacilities * priorityMultiplier;
+        double shapeAdj = shape * priorityMultiplier;
+
+        //Created Map of category to scores
+        Map categoryAdjMap = new HashMap<String, Double>();
+        categoryAdjMap.put("Area around base", (double) area);
+        categoryAdjMap.put("Communications facilities", communicationsAdj);
+        categoryAdjMap.put("Food and water", foodAdj);
+        categoryAdjMap.put("Health facilities", (double) health);
+        categoryAdjMap.put("Combating different levels of gravity", (double) gravity);
+        categoryAdjMap.put("Oxygen/Atmosphere regulation", oxygenRegulationAdj);
+        categoryAdjMap.put("Power generation", powerAdj);
+        categoryAdjMap.put("Radiation protection", radiationProtectionAdj);
+        categoryAdjMap.put("Supply storage", supplyAdj);
+        categoryAdjMap.put("Shape of the base", shapeAdj);
+        categoryAdjMap.put("Transportation facilities", (double) transportation);
+
+        //Sort the scores least to greatest
+        List<Entry<String, Double>> scoresAdj =  new ArrayList<>(categoryAdjMap.entrySet());
+        scoresAdj.sort(Entry.comparingByValue());
+        Map<String, Double> result = new LinkedHashMap<>();
+        for (Entry<String, Double> entry : scoresAdj) {
+            result.put(entry.getKey(), entry.getValue());
+        }
+        return result;
     }
 
     public String toString(){

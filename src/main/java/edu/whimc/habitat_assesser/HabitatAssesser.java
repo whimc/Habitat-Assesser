@@ -8,10 +8,8 @@ import edu.whimc.overworld_agent.OverworldAgent;
 import edu.whimc.habitat_assesser.utils.sql.Queryer;
 import edu.whimc.habitat_assesser.socket.AssessmentResponse;
 
-import java.util.LinkedList;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.UUID;
+import java.util.*;
+
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
@@ -55,6 +53,7 @@ public final class HabitatAssesser extends JavaPlugin {
         socketServer.addEventListener("assessment_response", AssessmentResponse.class, (client, response, ackRequest) -> {
             queryer.storeNewBuildAssessment(response, id -> {
                 String feedback = "Nice work on " + super.getConfig().getString("habitat_feedback." + response.getHighestCategory()) + ", have you thought about working on " + super.getConfig().getString("habitat_feedback." + response.getLowestCategory()) + "?";
+                Map<String, Double> sortedScoresAdj = response.getPriorityAdjScores();
                 this.getLogger().info("Interaction ID: " + response.getId());
                 this.getLogger().info("User: " + response.getUser());
                 this.getLogger().info("Feedback: " + feedback);
@@ -67,6 +66,17 @@ public final class HabitatAssesser extends JavaPlugin {
                 Utils.msg(player, "&m                                                                                 ");
                 Utils.msg(player, "&b&lYour habitat has been analyzed!");
                 Utils.msg(player, "");
+                Utils.msg(player, "Scores: &c0 = needs improvement, &e1-1.5 = good, &a2-3 = excellent");
+                for(String key : sortedScoresAdj.keySet()){
+                    Double score = sortedScoresAdj.get(key);
+                    if(score >= 2){
+                        Utils.msg(player, "&a" + key + " : " + score);
+                    } else if(score >= 1) {
+                        Utils.msg(player, "&e" + key + " : " + score);
+                    } else {
+                        Utils.msg(player, "&c" + key + " : " + score);
+                    }
+                }
                 Utils.msg(player, "&e&lFEEDBACK:");
                 Utils.msg(player, "    &6" + feedback);
                 Utils.msg(player, "");

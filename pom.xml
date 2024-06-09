@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.whimc</groupId>
     <artifactId>WHIMC-Habitat-Assesser</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <description>Runs Habitat Assessment for the Builder Agent</description>
     <packaging>jar</packaging>
 
@@ -16,7 +16,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-
+    <!-- Repo for plugin -->
+    <scm>
+        <connection>scm:git:git@github.com:whimc/Habitat-Assesser.git</connection>
+        <tag>HEAD</tag>
+    </scm>
     <build>
         <plugins>
             <plugin>
