@@ -25,6 +25,7 @@ It should show up in the target directory. Make sure to update your version numb
 | `/habitats queue-list`        | lists assessment ids in the queue         |
 | `/habitats queue-clear`       | clears the assessment queue               |
 | `/habitats queue-remove <id>` | removes assessment with id from the queue |
+| `/assess-habitat`             | gives all kids base assessments           |
 
 
 ## Config
