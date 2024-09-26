@@ -16,7 +16,7 @@ from rich.status import Status
 class Args:
     host: str = "localhost"
     port: int = 8235
-    api_url: str = "http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/assess-habitat"
+    api_url: str = "http://ec2-3-129-43-85.us-east-2.compute.amazonaws.com:8080/assess-habitat"
     log_file = None
 
 @dataclass
