@@ -58,7 +58,7 @@ def caption_image():
         versionNum = 2
     print(versionNum)
 
-    numData = np.fromstring(imgData, np.uint8)
+    numData = np.frombuffer(imgData, dtype=np.uint8)
     image = cv2.imdecode(numData, cv2.IMREAD_COLOR)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -86,7 +86,7 @@ def caption_image():
     # Return feedback
     n_gram_range = (1, 1)
     count = CountVectorizer(ngram_range=n_gram_range, stop_words="english").fit([caption])
-    candidates = count.get_feature_names()
+    candidates = count.get_feature_names_out()
     doc_embedding = keyword_model.encode([caption])
     candidate_embeddings = keyword_model.encode(candidates)
     distances = cosine_similarity(doc_embedding, candidate_embeddings)
@@ -129,7 +129,7 @@ def create_feedback():
     # Return feedback
     n_gram_range = (1, 1)
     count = CountVectorizer(ngram_range=n_gram_range, stop_words="english").fit([generated])
-    candidates = count.get_feature_names()
+    candidates = count.get_feature_names_out()
     doc_embedding = keyword_model.encode([generated])
     candidate_embeddings = keyword_model.encode(candidates)
     distances = cosine_similarity(doc_embedding, candidate_embeddings)
@@ -389,33 +389,17 @@ def run_habitat_models(world, users):
     block_counts = block_counts.reindex(block_dataset.columns,axis=1)
     block_counts = block_counts.fillna(0)
     
-    # Normalize block counts to the training distribution of each column
+    #Normalize block counts
     normalized_counts = block_counts.copy()
-
-    # Use the exact training columns and avoid iteritems() (removed in pandas 2)
-    for name in block_dataset.columns:
-        col_min = block_dataset[name].min()
-        col_max = block_dataset[name].max()
-        denom = (col_max - col_min)
-        if denom == 0 or pd.isna(denom):
-            # If a column was constant in training, set to 0.0 (or whatever your model expects)
-            normalized_counts[name] = 0.0
-        else:
-            normalized_counts[name] = (normalized_counts[name] - col_min) / denom
-
+    for name, values in block_counts.items():
+        normalized_counts[name] = (normalized_counts[name] - block_dataset[name].min()) / (block_dataset[name].max() - block_dataset[name].min())
     directory = "models"
     results = {}
-    # Convert once to the dtype Keras expects
-    x = normalized_counts.to_numpy(dtype=np.float32)  # shape (1, num_features)
     for file in os.listdir(directory):
-        model = tf.keras.models.load_model(os.path.join(directory, file), compile=False)
-        pred = model.predict(x, verbose=0)
-        results[file] = int(np.argmax(pred, axis=1)[0])
+        model = tf.keras.models.load_model(directory + '/' + file, compile=False)
+        result = np.argmax(model.predict(normalized_counts.to_numpy(dtype=np.float32), verbose=0))
+        results[file] = result
     return results
-#chatgpt told me to put this here --Jeff
-@app.get("/healthz")
-def healthz():
-    return {"status": "ok"}
 '''
 Task: Assess habitat
 Description: Gets base info to call db and retrieve blocks, returns randomized highest and lowest categories for feedback
