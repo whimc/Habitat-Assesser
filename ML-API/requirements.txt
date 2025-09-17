@@ -1,0 +1,27 @@
+# Core web framework
+Flask==3.1.0
+
+# Image and array processing
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+pillow==10.4.0
+torch==2.3.1
+torchvision==0.18.1
+
+# HuggingFace models
+sentence-transformers==3.0.1
+transformers==4.44.2
+
+# Machine learning / deep learning
+tensorflow-cpu==2.17.0
+keras==3.5.0
+scikit-learn==1.5.2
+pandas==2.2.2
+
+# Database connectivity
+sqlalchemy==2.0.34
+PyMySQL==1.1.1
+mysql-connector-python==9.0.0
+
+# Utilities
+python-dateutil==2.9.0.post0
