@@ -16,7 +16,7 @@ from rich.status import Status
 class Args:
     host: str = "localhost"
     port: int = 8235
-    api_url: str = "http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/assess-habitat"
+    api_url: str = "AWS-PUBLIC-DNS-HERE"
     log_file = None
 
 @dataclass
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--api-url",
-        default="http://ec2-3-145-142-180.us-east-2.compute.amazonaws.com:8080/assess-habitat",
+        default="AWS-PUBLIC-ADDRESS-HERE",
     )
     parser.add_argument(
         "--log-file",
