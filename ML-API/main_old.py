@@ -18,13 +18,6 @@ import PIL.Image as Image
 import io
 from base64 import encodebytes
 import datetime
-import sqlalchemy as db
-import tensorflow as tf
-from tensorflow import keras
-import os
-import pandas as pd
-import random
-from urllib.parse import quote_plus
 
 app = Flask(__name__)
 
@@ -58,7 +51,7 @@ def caption_image():
         versionNum = 2
     print(versionNum)
 
-    numData = np.frombuffer(imgData, dtype=np.uint8)
+    numData = np.fromstring(imgData, np.uint8)
     image = cv2.imdecode(numData, cv2.IMREAD_COLOR)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -86,7 +79,7 @@ def caption_image():
     # Return feedback
     n_gram_range = (1, 1)
     count = CountVectorizer(ngram_range=n_gram_range, stop_words="english").fit([caption])
-    candidates = count.get_feature_names_out()
+    candidates = count.get_feature_names()
     doc_embedding = keyword_model.encode([caption])
     candidate_embeddings = keyword_model.encode(candidates)
     distances = cosine_similarity(doc_embedding, candidate_embeddings)
@@ -129,7 +122,7 @@ def create_feedback():
     # Return feedback
     n_gram_range = (1, 1)
     count = CountVectorizer(ngram_range=n_gram_range, stop_words="english").fit([generated])
-    candidates = count.get_feature_names_out()
+    candidates = count.get_feature_names()
     doc_embedding = keyword_model.encode([generated])
     candidate_embeddings = keyword_model.encode(candidates)
     distances = cosine_similarity(doc_embedding, candidate_embeddings)
@@ -312,146 +305,6 @@ def tranformImage(image):
     ])
     image = preprocess(image)
     return image
-
-def run_habitat_models(world, users):
-    username = 'SETME'
-    password = 'SETME'
-    if "@" in password:
-        password = quote_plus(password)
-    host = 'SETME'
-    port = '3306'
-    #database = 'db?useSSL=false'
-    database = 'researchdb'
-    engine = None
-    #Connector to db
-    if "?useSSL=false" in database:
-        database = database.split('?')[0]
-        engine = db.create_engine('mysql+mysqlconnector://' + username + ':' + password+'@' + host + ':' + port + '/' + database, connect_args={'ssl_disabled': 'True'})
-    else:
-        engine = db.create_engine('mysql+pymysql://' + username + ':' + password+'@' + host + ':' + port + '/' + database)
-    meta = db.MetaData()
-    db.MetaData.reflect(meta, bind=engine)
-    worlds = meta.tables['co_world']
-    query_worlds = db.select(
-    worlds.c.id
-    ).where((worlds.c.world == world))
-    wid_result = None
-    with engine.connect() as conn:
-        wid_result = conn.execute(query_worlds).fetchall()
-    #users = request.form['teammates']
-    #print(wid_result)
-    #print(users)
-    #Get mapping user id to user name
-    user_map = meta.tables['co_user']
-    user_result = []
-    for i in range(len(users)):
-        user_query = db.select(
-        user_map.c.rowid
-        ).where((user_map.c.user == users[i]))
-        with engine.connect() as conn:
-            user_result.append(conn.execute(user_query).fetchall())
-    #print(user_result)   
-    #Get blocks from worlds of interest
-    blocks = meta.tables['co_block']
-    block_result = []
-    for i in range(len(user_result)):
-        query_blocks = db.select(
-        blocks.c.type,
-        ).where((blocks.c.wid == wid_result[0][0]) & (blocks.c.user == user_result[i][0][0]))
-        with engine.connect() as conn:
-            block_result.append(conn.execute(query_blocks).fetchall())
-
-    #Get mapping of block type id to block name
-    material_map = meta.tables['co_material_map']
-    material_query = db.select(
-        material_map.c.id,
-        material_map.c.material,
-    )
-    material_result = None
-    with engine.connect() as conn:
-        material_result = conn.execute(material_query).fetchall()
-    materials = []
-    for i in range(len(block_result)):
-        for j in range(len(block_result[i])):
-            block_id = block_result[i][j]
-            material = material_result[block_id[0] - 1]
-            materials.append(material)
-    df = pd.DataFrame(materials, columns = ['Block_id', 'Block_Type'])
-    blocks = df.Block_Type.unique()
-    counts = df.Block_Type.value_counts()
-    block_counts = pd.DataFrame(columns = blocks)
-    #print(block_counts)
-    for i, v in counts.items():
-        block_counts.at[0,i] = v
-    block_dataset = pd.read_csv("block_counts.csv", index_col = 'id')
-    block_dataset = block_dataset.dropna(axis=1, how='all')
-    block_dataset = block_dataset.fillna(0)
-    block_counts = block_counts.reindex(block_dataset.columns,axis=1)
-    block_counts = block_counts.fillna(0)
-    
-    #Normalize block counts
-    normalized_counts = block_counts.copy()
-    for name, values in block_counts.items():
-        normalized_counts[name] = (normalized_counts[name] - block_dataset[name].min()) / (block_dataset[name].max() - block_dataset[name].min())
-    directory = "models"
-    results = {}
-    for file in os.listdir(directory):
-        model = tf.keras.models.load_model(directory + '/' + file, compile=False)
-        result = np.argmax(model.predict(normalized_counts.to_numpy(dtype=np.float32), verbose=0))
-        results[file] = result
-    return results
-'''
-Task: Assess habitat
-Description: Gets base info to call db and retrieve blocks, returns randomized highest and lowest categories for feedback
-'''
-@app.route('/assess-habitat', methods=["POST"])
-def assess_habitat():
-    interaction_id = request.form['id']
-    user = request.form['user']
-    world = request.form['world']
-    teammates = request.form['teammates']
-    users = teammates.split(",")
-    results = run_habitat_models(world, users)
-    print(results)
-    min_val = list(results.values())[0]
-    max_val = list(results.values())[0]
-    min_indices = []
-    max_indices = []
-    for i in range(len(list(results))):
-        curr = list(results.values())[i]
-        if curr < min_val:
-            min_val = curr
-            min_indices = [i]
-        elif curr == min_val:
-            min_indices.append(i)
-        if curr > max_val:
-            max_val = curr
-            max_indices = [i]
-        elif curr == max_val:
-            max_indices.append(i)
-    random_lowest_index = min_indices[random.randint(0, len(min_indices)-1)]
-    low_category = list(results)[random_lowest_index]
-    lowest_category = low_category.replace('.h5', '')
-    
-    random_highest_index = max_indices[random.randint(0, len(max_indices)-1)]
-    high_category = list(results)[random_highest_index]
-    highest_category = high_category.replace('.h5', '')
-    
-    area = int(results["area.h5"])
-    communications_facilities = int(results["communications_facilities.h5"])
-    food = int(results["food.h5"])
-    gravity = int(results["gravity.h5"])
-    health = int(results["health.h5"])
-    oxygen_regulation = int(results["oxygen_regulation.h5"])
-    power_generation = int(results["power_generation.h5"])
-    radiation_protection = int(results["radiation_protection.h5"])
-    supplies = int(results["supplies.h5"])
-    shape = int(results["shape.h5"])
-    transportation = int(results["transportation.h5"])
-    return jsonify({"id": interaction_id, "user": user,"lowestcategory": lowest_category,"highestcategory": highest_category,
-                    "area": area, "communicationsfacilities": communications_facilities, "food": food, "gravity": gravity,
-                    "health": health, "oxygenregulation": oxygen_regulation, "powergeneration": power_generation, "radiationprotection": radiation_protection,
-                    "supplies": supplies, "shape": shape, "transportation": transportation})
 
 if __name__ == "__main__":
     vocab = Vocabulary(1)
