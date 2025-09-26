@@ -3,6 +3,7 @@
 Creates a socket server to send assessment requests to the API. Grades the student team's habitat using AI.
 
 Refer to the [WHIMC-Habitat-Assesser Client README](/client/README.md) for client setup.
+ML-API also has its own [README](/ML-API/README.md).
 
 
 ## Building
