@@ -8,14 +8,20 @@ ML-API also has its own [README](/ML-API/README.md).
 
 ## Building
 
-Compile a jar from the command line via Maven:
+Requires **Java 21+**. Compile a jar from the command line via Maven:
+
 ```
 $ mvn install
 ```
-It should show up in the target directory. Make sure to update your version number.
+
+Place `lib/WHIMC-QRF-Agent-3.3.11.jar` before building (download from [qrf-agent releases](https://github.com/whimc/qrf-agent/releases) and rename from `WHIMC-OverworldAgent-<version>.jar` until qrf-agent publishes under the new name).
+
+The jar will appear in the `target/` directory. Releases are automated on push to `main`: each release uses the current `pom.xml` version (starting at **1.1.0**) and the workflow bumps the patch version for the next release (1.1.1, 1.1.2, …).
 
 ## Dependencies
-- WHIMC Overworld Agent
+- WHIMC QRF Agent — JAR at `lib/WHIMC-QRF-Agent-<version>.jar` (currently `3.3.11`; download from [qrf-agent releases](https://github.com/whimc/qrf-agent/releases))
+- Java 21+
+- Minecraft / Spigot 1.21.11
 
 ## Commands
 

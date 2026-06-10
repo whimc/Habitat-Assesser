@@ -2,8 +2,8 @@ name: WHIMC-Habitat-Assesser
 version: '${project.version}'
 author: Jack Henhapl
 main: edu.whimc.habitat_assesser.HabitatAssesser
-api-version: 1.18
-depend: [WHIMC-OverworldAgent]
+api-version: '1.21'
+depend: [WHIMC-QRF-Agent]
 commands:
   habitats:
     permission: whimc-habitat-assessment.admin

@@ -36,7 +36,8 @@ public final class HabitatAssesser extends JavaPlugin {
 
         });
 
-        this.agentPlugin = (OverworldAgent) getServer().getPluginManager().getPlugin("WHIMC-OverworldAgent");
+        String qrfAgentName = getDescription().getDepend().get(0);
+        this.agentPlugin = (OverworldAgent) getServer().getPluginManager().getPlugin(qrfAgentName);
 
         //Set up habitat socket server
         Configuration configHabitats = new Configuration();

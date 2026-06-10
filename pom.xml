@@ -5,15 +5,16 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.whimc</groupId>
     <artifactId>WHIMC-Habitat-Assesser</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.0</version>
     <description>Runs Habitat Assessment for the Builder Agent</description>
     <packaging>jar</packaging>
 
     <name>WHIMC Habitat Assesser</name>
 
     <properties>
-        <java.version>1.8</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <qrf.agent.version>3.3.11</qrf.agent.version>
     </properties>
 
     <!-- Repo for plugin -->
@@ -22,20 +23,20 @@
         <tag>HEAD</tag>
     </scm>
     <build>
+        <finalName>${project.artifactId}-${project.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.13.0</version>
                 <configuration>
-                    <source>9</source>
-                    <target>9</target>
+                    <release>${maven.compiler.release}</release>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -47,22 +48,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <!-- Github release settings -->
-            <plugin>
-                <groupId>de.jutzig</groupId>
-                <artifactId>github-release-plugin</artifactId>
-                <version>1.1.1</version>
-                <configuration>
-                    <description>Release for v${project.version}</description>
-                    <releaseName>${project.artifactId}-${project.version}</releaseName>
-                    <tag>${project.version}</tag>
-                    <fileSets>
-                        <fileSet>
-                            <directory>${project.build.directory}</directory>
-                        </fileSet>
-                    </fileSets>
-                </configuration>
             </plugin>
         </plugins>
         <resources>
@@ -97,7 +82,7 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.18.2-R0.1-SNAPSHOT</version>
+            <version>1.21.11-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -107,10 +92,10 @@
         </dependency>
         <dependency>
             <artifactId>edu.whimc</artifactId>
-            <groupId>WHIMC-OverworldAgent</groupId>
+            <groupId>WHIMC-QRF-Agent</groupId>
             <scope>system</scope>
-            <version>2.0.0</version>
-            <systemPath>${pom.basedir}/lib/WHIMC-OverworldAgent-2.0.0.jar</systemPath>
+            <version>${qrf.agent.version}</version>
+            <systemPath>${pom.basedir}/lib/WHIMC-QRF-Agent-${qrf.agent.version}.jar</systemPath>
         </dependency>
         <!-- HolographicDisplays -->
         <dependency>
