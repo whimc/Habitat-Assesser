@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.whimc</groupId>
     <artifactId>WHIMC-Habitat-Assesser</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <description>Runs Habitat Assessment for the Builder Agent</description>
     <packaging>jar</packaging>
 
