@@ -21,7 +21,7 @@ pandas==2.2.2
 # Database connectivity
 sqlalchemy==2.0.34
 PyMySQL==1.1.1
-mysql-connector-python==9.0.0
+mysql-connector-python==9.1.0
 
 # Utilities
 python-dateutil==2.9.0.post0
